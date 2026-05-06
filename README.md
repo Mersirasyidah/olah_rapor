@@ -1,1 +1,2 @@
-# olah_rapor
+# aplikasi-speroba
+Aplikasi administrasi Speroba
