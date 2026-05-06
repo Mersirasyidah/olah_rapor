@@ -251,3 +251,15 @@ if kls_list:
         final_df = generate_nr_description(final_df)
 
         output = BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            for k in kls_list:
+                df_kls = final_df[final_df['Kelas'] == k]
+                if not df_kls.empty:
+                    write_form_nilai_sheet(df_kls, mapel, "Ganjil", k, tahun, guru, writer, f"Nilai {k}")
+        
+        st.download_button(
+            "Klik untuk Unduh File",
+            output.getvalue(),
+            f"Form_Nilai_{mapel}_{tahun.replace('/','-')}.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
