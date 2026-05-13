@@ -80,16 +80,19 @@ def calculate_nr(df_input: pd.DataFrame) -> pd.DataFrame:
 
     df['Avg_PSA'] = np.where((df['PTS'] + df['SAS']) > 0.0, (df['PTS'] + df['SAS']) / 2, 0.0).round(2)
 
+    # PERUBAHAN RUMUS: TP*1, LM*2, PSA*1
     nr_components = df[['Avg_TP', 'Avg_LM', 'Avg_PSA']].copy()
     nr_components['Avg_TP_weighted'] = nr_components['Avg_TP'].fillna(0.0) * 1
-    nr_components['Avg_LM_weighted'] = nr_components['Avg_LM'].fillna(0.0) * 1
-    nr_components['Avg_PSA_weighted'] = nr_components['Avg_PSA'].fillna(0.0) * 2
+    nr_components['Avg_LM_weighted'] = nr_components['Avg_LM'].fillna(0.0) * 2
+    nr_components['Avg_PSA_weighted'] = nr_components['Avg_PSA'].fillna(0.0) * 1
     
     sum_components = nr_components['Avg_TP_weighted'] + nr_components['Avg_LM_weighted'] + nr_components['Avg_PSA_weighted']
+    
+    # Hitung pembagi (Total Bobot) secara dinamis
     count_components = nr_components.apply(lambda row: sum([
         1 if pd.notna(row['Avg_TP']) and row['Avg_TP'] > 0.0 else 0,
-        1 if pd.notna(row['Avg_LM']) and row['Avg_LM'] > 0.0 else 0,
-        2 if pd.notna(row['Avg_PSA']) and row['Avg_PSA'] > 0.0 else 0
+        2 if pd.notna(row['Avg_LM']) and row['Avg_LM'] > 0.0 else 0,
+        1 if pd.notna(row['Avg_PSA']) and row['Avg_PSA'] > 0.0 else 0
     ]), axis=1)
 
     df['NR_FLOAT'] = np.where(count_components > 0, sum_components / count_components, 0.0)
@@ -101,31 +104,20 @@ def calculate_tk_status(df_input: pd.DataFrame) -> pd.DataFrame:
     tp_cols = ['TP1', 'TP2', 'TP3', 'TP4', 'TP5']
     threshold = float(KKM)
 
-    # Inisialisasi awal Status
     for tp in tp_cols:
         tk = f'TK_{tp}'
         df[tk] = df[tp].apply(lambda x: "" if x <= 0.0 or pd.isna(x) else "T" if x >= threshold else "R")
 
     def apply_validation_rule(row):
-        # Ambil hanya TP yang memiliki nilai (di atas 0)
         filled_tps = [tp for tp in tp_cols if pd.notna(row[tp]) and row[tp] > 0.0]
-        
         if len(filled_tps) > 0:
-            # Cek apakah semua nilai yang diisi tuntas (>= 80)
             all_t = all(row[tp] >= threshold for tp in filled_tps)
-            
             if all_t:
-                # Cari nilai terkecil di antara TP yang diisi
                 min_val = min([row[tp] for tp in filled_tps])
-                # Cari TP mana saja yang memiliki nilai terkecil tersebut
                 candidates = [tp for tp in filled_tps if row[tp] == min_val]
-                # AMBIL HANYA SATU (paling pertama muncul) untuk dipaksa jadi R
                 target_tp = candidates[0]
-                
-                # Pastikan yang lain T (untuk yang diisi)
                 for tp in filled_tps:
                     row[f'TK_{tp}'] = "T"
-                # Set satu yang terpilih sebagai R
                 row[f'TK_{target_tp}'] = "R"
         return row
 
@@ -168,39 +160,31 @@ def write_form_nilai_sheet(df, mapel, semester, kelas, tp, guru, nip, writer, sh
     workbook = writer.book
     worksheet = workbook.add_worksheet(sheet_name)
 
-    # Formats
     fmt_header = workbook.add_format({'border': 1, 'bold': True, 'bg_color': '#D9E1F2', 'align': 'center', 'valign': 'vcenter', 'text_wrap': True})
     fmt_border = workbook.add_format({'border': 1, 'align': 'center', 'num_format': '0.0'})
     fmt_text = workbook.add_format({'border': 1, 'align': 'left'})
     fmt_protected = workbook.add_format({'border': 1, 'bg_color': '#FFF2CC', 'align': 'center', 'num_format': '0.0', 'locked': True})
     fmt_int = workbook.add_format({'border': 1, 'bg_color': '#FFF2CC', 'align': 'center', 'num_format': '0', 'locked': True})
 
-    # Columns Setup
     TP_COLS = ['TP1', 'TP2', 'TP3', 'TP4', 'TP5']
     LM_COLS = ['LM_1', 'LM_2', 'LM_3', 'LM_4', 'LM_5']
     CORE_COLS = TP_COLS + LM_COLS + ['PTS', 'SAS', 'Avg_TP', 'Avg_LM', 'Avg_PSA', 'NR']
     
     HEADER_LABELS = ['NIS', 'NAMA SISWA', 'KELAS'] + \
-                   [COLUMN_DISPLAY_MAP.get(c, c) for c in CORE_COLS] + \
-                   [f"Status TP-{i+1}" for i in range(5)] + ['Deskripsi Rapor']
+                    [COLUMN_DISPLAY_MAP.get(c, c) for c in CORE_COLS] + \
+                    [f"Status TP-{i+1}" for i in range(5)] + ['Deskripsi Rapor']
 
-    # Header Info
     worksheet.write(0, 0, 'Mata Pelajaran: ' + str(mapel))
     worksheet.write(1, 0, 'Kelas: ' + str(kelas))
     worksheet.write(2, 0, 'Semester: ' + str(semester))
     worksheet.write(3, 0, 'KKTP: ' + str(KKM))
 
-    # Table Header
     START_ROW = 6
     for i, label in enumerate(HEADER_LABELS):
         worksheet.write(START_ROW, i, label, fmt_header)
 
-    # Index Kolom untuk Rumus
-    idx_tp_start = 3 
-    idx_tp_end = 7
-    idx_avg_tp = 15
-    idx_avg_lm = 16
-    idx_avg_psa = 17
+    idx_tp_start, idx_tp_end = 3, 7
+    idx_avg_tp, idx_avg_lm, idx_avg_psa = 15, 16, 17
     idx_nr = 18
     idx_status_start = 19
     idx_desc = 24
@@ -217,31 +201,27 @@ def write_form_nilai_sheet(df, mapel, semester, kelas, tp, guru, nip, writer, sh
             val = df.iloc[r_idx][col_name]
             worksheet.write(row, 3 + i, val if val > 0 else "", fmt_border)
 
-        # RUMUS Rata-rata
-        col_tp_s = col_idx_to_excel(idx_tp_start)
-        col_tp_e = col_idx_to_excel(idx_tp_end)
+        # RUMUS EXCEL Rata-rata
+        col_tp_s, col_tp_e = col_idx_to_excel(idx_tp_start), col_idx_to_excel(idx_tp_end)
         worksheet.write_formula(row, idx_avg_tp, f'=IFERROR(AVERAGEIF({col_tp_s}{excel_row}:{col_tp_e}{excel_row},">0"),0)', fmt_protected)
         
-        col_lm_s = col_idx_to_excel(8)
-        col_lm_e = col_idx_to_excel(12)
+        col_lm_s, col_lm_e = col_idx_to_excel(8), col_idx_to_excel(12)
         worksheet.write_formula(row, idx_avg_lm, f'=IFERROR(AVERAGEIF({col_lm_s}{excel_row}:{col_lm_e}{excel_row},">0"),0)', fmt_protected)
 
         worksheet.write_formula(row, idx_avg_psa, f'=IF(({col_idx_to_excel(13)}{excel_row}+{col_idx_to_excel(14)}{excel_row})>0,({col_idx_to_excel(13)}{excel_row}+{col_idx_to_excel(14)}{excel_row})/2,0)', fmt_protected)
 
-        # RUMUS NR
+        # PERUBAHAN RUMUS EXCEL NR (TP*1, LM*2, PSA*1)
         c_atp, c_alm, c_apsa = col_idx_to_excel(idx_avg_tp), col_idx_to_excel(idx_avg_lm), col_idx_to_excel(idx_avg_psa)
-        denom = f'(({c_atp}{excel_row}>0)*1+({c_alm}{excel_row}>0)*1+({c_apsa}{excel_row}>0)*2)'
-        worksheet.write_formula(row, idx_nr, f'=IF({c_apsa}{excel_row}>0,ROUND(({c_atp}{excel_row}+{c_alm}{excel_row}+2*{c_apsa}{excel_row})/MAX(1,{denom}),0),0)', fmt_int)
+        # Denominator: TP*1 + LM*2 + PSA*1
+        denom = f'(({c_atp}{excel_row}>0)*1+({c_alm}{excel_row}>0)*2+({c_apsa}{excel_row}>0)*1)'
+        # Formula: (ATP*1 + ALM*2 + APSA*1) / Denominator
+        formula_nr = f'=IF({denom}>0,ROUND(({c_atp}{excel_row}+2*{c_alm}{excel_row}+{c_apsa}{excel_row})/{denom},0),0)'
+        worksheet.write_formula(row, idx_nr, formula_nr, fmt_int)
 
-        # PERBAIKAN LOGIKA STATUS TP DI EXCEL:
-        # Menggunakan MATCH untuk memastikan hanya satu R jika nilai sama semua.
+        # Logika Status TP
         range_tp = f"{col_tp_s}{excel_row}:{col_tp_e}{excel_row}"
         for i in range(5):
             curr_tp_col = col_idx_to_excel(idx_tp_start + i)
-            # Logika: 
-            # 1. Jika Nilai < 80 -> R. 
-            # 2. Jika semua >= 80, cari posisi nilai terkecil pertama menggunakan MATCH. 
-            # 3. Jika posisi kolom ini == hasil MATCH, maka R. Selain itu T.
             formula_status = (
                 f'=IF({curr_tp_col}{excel_row}=0,"",'
                 f'IF({curr_tp_col}{excel_row}<{KKM},"R",'
