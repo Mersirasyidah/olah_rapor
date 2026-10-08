@@ -257,11 +257,13 @@ def draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_urut, sel_tgl_ttd):
         y -= 4*mm
 
     c.setFont("Helvetica-Oblique", 10)
-    c.drawCentredString(width/2, y, "Jalan Karangsari, Banguntapan, Kabupaten Bantul, Yogyakarta 55198 Telp. 382754")
+    c.drawCentredString(width/2, y, "Jalan Karangsari, Banguntapan, Kabupaten Bantul, Yogyakarta 55198 Telp. (0274) 382754 382754")
+    y -= 5*mm
+    c.drawCentredString(width/2, y, "Telp. (0274) 382754 382754")
     y -= 5*mm
     c.setFont("Helvetica", 10)
     c.setFillColor(blue)
-    c.drawCentredString(width/2, y, "Website : www.smpn2banguntapan.sch.id Email : smp2banguntapan@yahoo.com")
+    c.drawCentredString(width/2, y, "Laman : www.smpn2banguntapan.sch.id; Pos-el : smp2banguntapan@yahoo.com")
     c.setFillColor(black)
     y -= 3*mm
 
