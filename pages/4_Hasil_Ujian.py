@@ -257,7 +257,7 @@ def draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_urut, sel_tgl_ttd):
         y -= 4*mm
 
     c.setFont("Helvetica-Oblique", 10)
-    c.drawCentredString(width/2, y, "Jalan Karangsari, Banguntapan, Kabupaten Bantul, Yogyakarta 55198 Telp. (0274) 382754 382754")
+    c.drawCentredString(width/2, y, "Jalan Karangsari, Banguntapan, Kabupaten Bantul, Yogyakarta 55198")
     y -= 5*mm
     c.drawCentredString(width/2, y, "Telp. (0274) 382754 382754")
     y -= 5*mm
@@ -397,7 +397,7 @@ def draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_urut, sel_tgl_ttd):
 
     c.setFont("Helvetica", 12)
     c.drawString(x_ttd, y_ttd_start, f"Banguntapan, {tgl}")
-    y_ttd_start -= 8*mm
+    y_ttd_start -= 10*mm
     c.drawString(x_ttd, y_ttd_start, "Mengetahui,")
     y_ttd_start -= 5*mm
     c.drawString(x_ttd, y_ttd_start, "Kepala Sekolah,")
