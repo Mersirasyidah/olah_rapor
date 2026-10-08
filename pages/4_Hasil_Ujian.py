@@ -243,10 +243,10 @@ def draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_urut, sel_tgl_ttd):
         logo_h = 30*mm
 
         # Posisi logo dari sisi kanan
-        x_logo_kanan = width - margin_right - logo_w
+        x_logo_kanan = width - margin_right - logo_w + 5*mm
 
         # Tinggi dibuat sama dengan logo kiri
-        y_logo_kanan = height - margin_top - (-10*mm) - logo_h
+        y_logo_kanan = height - margin_top - (-10*mm) - logo_h 
 
         c.drawImage(
             logo_kanan_path,
