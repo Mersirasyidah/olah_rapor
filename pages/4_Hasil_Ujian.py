@@ -234,6 +234,33 @@ def draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_urut, sel_tgl_ttd):
         # Menghilangkan error jika gambar tidak ditemukan
         pass
 
+    # =========================
+    # LOGO KANAN ATAS
+    # =========================
+    logo_kanan_path = "assets/logo_kanan.png"
+    try:
+        logo_w = 30*mm
+        logo_h = 30*mm
+
+        # Posisi logo dari sisi kanan
+        x_logo_kanan = width - margin_right - logo_w
+
+        # Tinggi dibuat sama dengan logo kiri
+        y_logo_kanan = height - margin_top - (-10*mm) - logo_h
+
+        c.drawImage(
+            logo_kanan_path,
+            x_logo_kanan,
+            y_logo_kanan,
+            width=logo_w,
+            height=logo_h,
+            preserveAspectRatio=True,
+            mask='auto'
+        )
+    except Exception:
+        pass
+
+    
     # KOP sederhana (CentredString tidak dipengaruhi margin kiri/kanan)
     c.setFont("Helvetica-Bold", 12)
     c.drawCentredString(width/2, y, "PEMERINTAH KABUPATEN BANTUL")
@@ -393,7 +420,7 @@ def draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_urut, sel_tgl_ttd):
 
     # Posisikan tanda tangan berdasarkan margin_right dan margin_bottom
     x_ttd = width - margin_right - 70*mm
-    y_ttd_start = margin_bottom + 58*mm
+    y_ttd_start = margin_bottom + 62*mm
 
     c.setFont("Helvetica", 12)
     c.drawString(x_ttd, y_ttd_start, f"Banguntapan, {tgl}")
