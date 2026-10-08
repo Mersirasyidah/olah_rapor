@@ -383,7 +383,7 @@ def draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_urut, sel_tgl_ttd):
     adj_y = cell_middle - (font_size/3.5)
     c.drawString(x0 + col_no_w + 2*mm, adj_y, "Rata-rata")
     c.drawCentredString(x0 + col_no_w + col_mapel_w + col_nilai_w/2, adj_y, format_score(rata2))
-    y_text -= row_height + 30
+    y_text -= row_height + 20
 
     # tanda tangan
     # GUNAKAN TANGGAL PILIHAN DARI STREAMLIT (sel_tgl_ttd)
@@ -397,7 +397,7 @@ def draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_urut, sel_tgl_ttd):
 
     c.setFont("Helvetica", 12)
     c.drawString(x_ttd, y_ttd_start, f"Banguntapan, {tgl}")
-    y_ttd_start -= 10*mm
+    y_ttd_start -= 8*mm
     c.drawString(x_ttd, y_ttd_start, "Mengetahui,")
     y_ttd_start -= 5*mm
     c.drawString(x_ttd, y_ttd_start, "Kepala Sekolah,")
@@ -415,7 +415,7 @@ def draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_urut, sel_tgl_ttd):
     c.drawString(x_ttd, y_ttd_after, "Alina Fiftiyani Nurjannah, M.Pd.")
     y_ttd_after -= 6*mm
     c.drawString(x_ttd, y_ttd_after, "NIP 198001052009032006")
-
+    
 # PDF generator
 def make_pdf_for_student(row, mapel_urut, sel_tgl_ttd):
     buffer = io.BytesIO()
