@@ -393,7 +393,7 @@ def draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_urut, sel_tgl_ttd):
 
     # Posisikan tanda tangan berdasarkan margin_right dan margin_bottom
     x_ttd = width - margin_right - 70*mm
-    y_ttd_start = margin_bottom + 67*mm
+    y_ttd_start = margin_bottom + 58*mm
 
     c.setFont("Helvetica", 12)
     c.drawString(x_ttd, y_ttd_start, f"Banguntapan, {tgl}")
