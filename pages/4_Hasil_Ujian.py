@@ -267,10 +267,19 @@ def draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_target, sel_tgl_ttd)
     c.drawString(value_x, y, " " + str(row.get("Kelas", "")))
     y -= 10 * mm
 
-    # Pengambilan Nilai
+# Pengambilan Nilai (Dengan penanganan otomatis jika salah isi kolom di Excel)
     nilai_list = []
     for subj in mapel_target:
         raw = row.get(subj, np.nan)
+        
+        # Jika Seni Budaya kosong di Excel tapi Prakarya ada isinya, ambil dari Prakarya
+        if subj == "Seni Budaya" and (pd.isna(raw) or str(raw).strip() == ""):
+            raw = row.get("Prakarya", np.nan)
+            
+        # Jika Prakarya kosong di Excel tapi Seni Budaya ada isinya, ambil dari Seni Budaya
+        elif subj == "Prakarya" and (pd.isna(raw) or str(raw).strip() == ""):
+            raw = row.get("Seni Budaya", np.nan)
+
         try:
             nilai_list.append(float(raw) if pd.notna(raw) else np.nan)
         except Exception:
