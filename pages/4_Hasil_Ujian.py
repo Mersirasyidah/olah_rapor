@@ -13,8 +13,8 @@ from datetime import datetime
 # pip install streamlit numpy pandas reportlab openpyxl openpyxl
 
 # === Mapel per jenjang ===
-# Daftar mata pelajaran untuk Kelas 7 dan Kelas 8 (Mengandung Seni Budaya)
-mapel_kelas_7_8 = [
+# Daftar mata pelajaran untuk Kelas 8 dan Kelas 9 (Mengandung Seni Budaya)
+mapel_kelas_8_9 = [
     "Pend. Agama dan Budi Pekerti",
     "Pendidikan Pancasila",
     "Bahasa Indonesia",
@@ -24,12 +24,12 @@ mapel_kelas_7_8 = [
     "Bahasa Inggris",
     "PJOK",
     "Informatika",
-    "Seni Budaya", # Khusus Kelas 7 & 8
+    "Seni Budaya", # Khusus Kelas 8 & 9
     "Bahasa Jawa"
 ]
 
-# Daftar mata pelajaran untuk Kelas 9 (Mengandung Prakarya)
-mapel_kelas_9 = [
+# Daftar mata pelajaran untuk Kelas 7 (Mengandung Prakarya)
+mapel_kelas_7 = [
     "Pend. Agama dan Budi Pekerti",
     "Pendidikan Pancasila",
     "Bahasa Indonesia",
@@ -39,12 +39,12 @@ mapel_kelas_9 = [
     "Bahasa Inggris",
     "PJOK",
     "Informatika",
-    "Prakarya", # Khusus Kelas 9
+    "Prakarya", # Khusus Kelas 7
     "Bahasa Jawa"
 ]
 
 # Gabungan semua mapel (untuk template Excel)
-mapel_semua = sorted(set(mapel_kelas_7_8) | set(mapel_kelas_9))
+mapel_semua = sorted(set(mapel_kelas_8_9) | set(mapel_kelas_7))
 
 # Mapping bulan Indonesia
 bulan_id = {
@@ -130,14 +130,14 @@ else:
 # Tentukan mapel sesuai jenjang
 kelas_upper = str(sel_kelas).upper().strip()
 
-# LOGIKA UTAMA: Cek apakah kelas adalah Kelas 9 (IX atau 9)
-# Jika kelas dimulai dengan "IX" atau "9", gunakan mapel Kelas 9 (Prakarya)
-if kelas_upper.startswith("IX") or kelas_upper.startswith("9"):
-    # Gunakan daftar mapel Kelas 9 (Prakarya)
-    mapel_urut = [m for m in mapel_kelas_9 if m in df.columns]
+# LOGIKA UTAMA: Cek apakah kelas adalah Kelas 7 (VII atau 7)
+# Jika kelas dimulai dengan "VII" atau "7", gunakan mapel Kelas 7 (Prakarya)
+if kelas_upper.startswith("VII") or kelas_upper.startswith("7"):
+    # Gunakan daftar mapel Kelas 7 (Prakarya)
+    mapel_urut = [m for m in mapel_kelas_7 if m in df.columns]
 else:
-    # Gunakan daftar mapel Kelas 7/8 (Seni Budaya)
-    mapel_urut = [m for m in mapel_kelas_7_8 if m in df.columns]
+    # Gunakan daftar mapel Kelas 8/9 (Seni Budaya)
+    mapel_urut = [m for m in mapel_kelas_8_9 if m in df.columns]
 
 # Pastikan kolom penting ada
 expected_base = ["Kelas", "NIS", "Nama Siswa"]
@@ -466,15 +466,15 @@ def make_pdf_for_class(df_kelas, mapel_urut, sel_tgl_ttd):
     return buffer
 
 # Tambahan: fungsi untuk semua kelas paralel (jika ingin semua kelas di file)
-def make_pdf_for_all_classes(df_all, kelas_list_all, mapel_kelas_7_8, mapel_kelas_9, sel_tgl_ttd):
+def make_pdf_for_all_classes(df_all, kelas_list_all, mapel_kelas_8_9, mapel_kelas_7, sel_tgl_ttd):
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     for kelas in kelas_list_all:
         kelas_upper = str(kelas).upper().strip()
         if kelas_upper.startswith("IX") or kelas_upper.startswith("9"):
-            mapel_u = [m for m in mapel_kelas_9 if m in df_all.columns]
+            mapel_u = [m for m in mapel_kelas_7 if m in df_all.columns]
         else:
-            mapel_u = [m for m in mapel_kelas_7_8 if m in df_all.columns]
+            mapel_u = [m for m in mapel_kelas_8_9 if m in df_all.columns]
         df_sel = df_all[df_all["Kelas"].astype(str) == str(kelas)]
         for _, row in df_sel.iterrows():
             draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_u, sel_tgl_ttd)
@@ -508,7 +508,7 @@ else:
     if len(kelas_list) > 1:
         st.download_button(
             "📚 Download PDF (Semua kelas)",
-            data=make_pdf_for_all_classes(df, kelas_list, mapel_kelas_7_8, mapel_kelas_9, sel_tgl_ttd),
+            data=make_pdf_for_all_classes(df, kelas_list, mapel_kelas_8_9, mapel_kelas_7, sel_tgl_ttd),
             file_name=f"Laporan_Semua_Kelas_{sel_tahun}.pdf",
             mime="application/pdf"
         )
