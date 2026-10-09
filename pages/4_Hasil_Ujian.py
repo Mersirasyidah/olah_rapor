@@ -132,10 +132,11 @@ for col in mapel_semua:
     df.loc[df[col] == "", col] = np.nan
     df[col] = pd.to_numeric(df[col], errors="coerce")
 
-kelas_list = sorted(df["Kelas"].astype(str).unique())
-sel_kelas = st.selectbox("Pilih Kelas", kelas_list)
+# Ambil daftar semua kelas unik dari file Excel
+semua_kelas_di_excel = sorted(df["Kelas"].astype(str).unique())
+sel_kelas = st.selectbox("Pilih Kelas", semua_kelas_di_excel)
 
-semua_paralel = st.checkbox("Cetak semua kelas ?", value=False)
+semua_paralel = st.checkbox("Cetak semua kelas paralel?", value=False)
 
 if semua_paralel:
     prefix = str(sel_kelas).strip()[0]
@@ -318,7 +319,7 @@ def draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_target, sel_tgl_ttd)
         val = nilai_series.get(subj, np.nan)
         c.drawCentredString(x0 + col_no_w / 2, adj_y, str(i))
         c.drawString(x0 + col_no_w + 2 * mm, adj_y, subj)
-        c.drawCentredString(x0 + col_no_w + col_mapel_w + col_nilai_w / 2, adj_y, format_score(val))
+        c.drawCentredString(x0 + col_no_w + col_mapel_w + col_nilai_w / 2, adj_y, val_str := format_score(val))
         y_text -= row_height
 
     # Jumlah & Rata-rata
@@ -394,4 +395,36 @@ def make_pdf_for_all_classes(df_all, kelas_list_all, sel_tgl_ttd):
             c.showPage()
     c.save()
     buffer.seek(0)
-    return
+    return buffer
+
+# --- Tombol Unduh ---
+st.markdown("---")
+st.subheader("Pilih Siswa & Unduh Laporan")
+
+if not df_kelas.empty:
+    if sel_siswa != "-- Semua Siswa --":
+        row_siswa = df_kelas[df_kelas["Nama Siswa"] == sel_siswa].iloc[0]
+        st.download_button(
+            "📄 Download PDF (Per Siswa)",
+            data=make_pdf_for_student(row_siswa, sel_tgl_ttd),
+            file_name=f"Laporan_{row_siswa['Nama Siswa']}.pdf",
+            mime="application/pdf"
+        )
+
+    st.download_button(
+        "📄 Download PDF (Per Kelas)",
+        data=make_pdf_for_class(df_kelas, sel_tgl_ttd),
+        file_name=f"Laporan_{sel_kelas}.pdf",
+        mime="application/pdf"
+    )
+else:
+    st.warning("Tidak ada data siswa untuk kelas yang dipilih.")
+
+# Tombol Download Semua Kelas diletakkan secara terpisah agar SELALU MUNCUL
+st.markdown("---")
+st.download_button(
+    "📚 Download PDF (Semua Kelas di Excel)",
+    data=make_pdf_for_all_classes(df, semua_kelas_di_excel, sel_tgl_ttd),
+    file_name=f"Laporan_Semua_Kelas_{sel_tahun}.pdf",
+    mime="application/pdf"
+)
