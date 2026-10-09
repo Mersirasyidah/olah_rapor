@@ -45,14 +45,18 @@ mapel_semua = sorted(set(mapel_kelas_8_9) | set(mapel_kelas_7))
 
 # Helper penentu daftar mapel berdasarkan nama kelas
 def get_mapel_by_kelas(kelas_name):
+    # Konversi ke string, ubah ke huruf kapital, dan hapus spasi di awal/akhir
     kelas_str = str(kelas_name).upper().strip()
-    # Jika diawali "7" atau "VII", gunakan mapel Kelas 7 (Prakarya)
-    if kelas_str.startswith("VII") or kelas_str.startswith("7"):
-        return mapel_kelas_7
-    # Untuk Kelas 8 dan Kelas 9, gunakan mapel Kelas 8 & 9 (Seni Budaya)
+    
+    # Deteksi eksplisit Kelas 8 dan Kelas 9 (Menggunakan Seni Budaya)
+    # Memeriksa apakah nama kelas mengandung '8', 'VIII', '9', atau 'IX'
+    is_kelas_8_atau_9 = any(k in kelas_str for k in ["8", "VIII", "9", "IX"])
+    
+    if is_kelas_8_atau_9:
+        return mapel_kelas_8_9  # Menggunakan Seni Budaya
     else:
-        return mapel_kelas_8_9
-
+        return mapel_kelas_7    # Menggunakan Prakarya
+        
 # Mapping bulan Indonesia
 bulan_id = {
     "January": "Januari", "February": "Februari", "March": "Maret",
