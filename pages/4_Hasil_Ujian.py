@@ -1,5 +1,5 @@
 import io
-import os  # <-- ditambahkan agar os.path.exists() bisa dipakai untuk tanda tangan
+import os
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -8,9 +8,6 @@ from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 from reportlab.lib.colors import blue, black, lightgrey
 from datetime import datetime
-
-# Pastikan Anda sudah menginstal reportlab dan openpyxl:
-# pip install streamlit numpy pandas reportlab openpyxl
 
 # === Mapel per jenjang ===
 # Daftar mata pelajaran untuk Kelas 8 dan Kelas 9 (Mengandung Seni Budaya)
@@ -24,7 +21,7 @@ mapel_kelas_8_9 = [
     "Bahasa Inggris",
     "PJOK",
     "Informatika",
-    "Seni Budaya", # Khusus Kelas 8 & 9
+    "Seni Budaya",  # Khusus Kelas 8 & 9
     "Bahasa Jawa"
 ]
 
@@ -39,7 +36,7 @@ mapel_kelas_7 = [
     "Bahasa Inggris",
     "PJOK",
     "Informatika",
-    "Prakarya", # Khusus Kelas 7
+    "Prakarya",    # Khusus Kelas 7
     "Bahasa Jawa"
 ]
 
@@ -68,8 +65,6 @@ st.header("Laporan Hasil Asesmen")
 st.markdown("---")
 
 # --- Pilihan di Streamlit ---
-
-# Pilihan asesmen
 asesmen_opsi = [
     "ASESMEN SUMATIF TENGAH SEMESTER GENAP",
     "ASESMEN SUMATIF AKHIR SEMESTER GANJIL",
@@ -78,11 +73,9 @@ asesmen_opsi = [
 ]
 sel_asesmen = st.selectbox("Pilih Jenis Asesmen", asesmen_opsi)
 
-# Tahun pelajaran
 tahun_opsi = [f"{th}/{th+1}" for th in range(2025, 2036)]
 sel_tahun = st.selectbox("Pilih Tahun Pelajaran", tahun_opsi, index=0)
 
-# Input tanggal kustom untuk tanda tangan
 sel_tgl_ttd = st.date_input("Tanggal Penulisan Tanda Tangan (di dokumen PDF)", datetime.now(), format="DD/MM/YYYY")
 
 st.markdown("---")
@@ -110,7 +103,6 @@ if not uploaded:
     st.info("Silakan unggah file Excel nilai (menggunakan template).")
     st.stop()
 
-# Baca file
 try:
     df = pd.read_excel(uploaded, engine="openpyxl")
 except Exception as e:
@@ -119,17 +111,16 @@ except Exception as e:
 
 df.columns = df.columns.str.strip()
 
-# Pilih kelas dari file
 if "Kelas" not in df.columns:
     st.error("Kolom 'Kelas' tidak ditemukan di file. Pastikan pakai template.")
     st.stop()
 
-# Pastikan semua kolom mapel ada di df agar tidak error saat diakses
+# Pastikan seluruh kolom mapel ada di DataFrame agar tidak KeyError
 for m in mapel_semua:
     if m not in df.columns:
         df[m] = np.nan
 
-# Bersihkan & konversi nilai pada semua kolom mapel yang ada di df
+# Bersihkan & konversi nilai numerik
 for col in mapel_semua:
     df[col] = (
         df[col]
@@ -144,7 +135,6 @@ for col in mapel_semua:
 kelas_list = sorted(df["Kelas"].astype(str).unique())
 sel_kelas = st.selectbox("Pilih Kelas", kelas_list)
 
-# Tambahan: opsi cetak semua paralel
 semua_paralel = st.checkbox("Cetak semua kelas ?", value=False)
 
 if semua_paralel:
@@ -153,9 +143,6 @@ if semua_paralel:
 else:
     df_kelas = df[df["Kelas"].astype(str) == str(sel_kelas)].copy()
 
-# Tentukan mapel urut untuk kelas yang sedang dipilih saat ini
-mapel_urut = get_mapel_by_kelas(sel_kelas)
-
 # Pastikan kolom wajib dasar ada
 expected_base = ["Kelas", "NIS", "Nama Siswa"]
 missing_base = [c for c in expected_base if c not in df.columns]
@@ -163,61 +150,52 @@ if missing_base:
     st.error(f"Kolom wajib hilang: {missing_base}")
     st.stop()
 
-# Pilih siswa
 siswa_list = df_kelas["Nama Siswa"].astype(str).tolist()
 sel_siswa = st.selectbox("Pilih Siswa", ["-- Semua Siswa --"] + siswa_list)
 
-# Helper: format skor aman
 def format_score(val):
     if pd.isna(val):
         return ""
     try:
-        num = float(val)
-        return f"{num:.2f}"
+        return f"{float(val):.2f}"
     except Exception:
         return str(val)
 
-# Fungsi gambar halaman siswa DENGAN MARGIN
+# Fungsi menggambar halaman PDF per siswa
 def draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_target, sel_tgl_ttd):
     width, height = A4
 
-    # === PENGATURAN MARGIN ===
     margin_left   = 30 * mm
     margin_right  = 20 * mm
     margin_top    = 20 * mm
     margin_bottom = 20 * mm
 
-    # Hitung area kerja
-    content_width  = width - (margin_left + margin_right)
-
-    # Titik awal Y (di dalam margin atas)
+    content_width = width - (margin_left + margin_right)
     y = height - margin_top
 
-    # Logo kiri atas
+    # Logo Kiri
     logo_path = "assets/logo_kiri.png"
     if os.path.exists(logo_path):
         try:
-            logo_w = 30 * mm
-            logo_h = 30 * mm
+            logo_w, logo_h = 30 * mm, 30 * mm
             x_logo = margin_left - 10 * mm
             y_logo = height - margin_top - (-10 * mm) - logo_h
             c.drawImage(logo_path, x_logo, y_logo, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
         except Exception:
             pass
 
-    # Logo kanan atas
+    # Logo Kanan
     logo_kanan_path = "assets/logo_kanan.png"
     if os.path.exists(logo_kanan_path):
         try:
-            logo_w = 30 * mm
-            logo_h = 30 * mm
+            logo_w, logo_h = 30 * mm, 30 * mm
             x_logo_kanan = width - margin_right - logo_w + 5 * mm
             y_logo_kanan = height - margin_top - (-10 * mm) - logo_h 
             c.drawImage(logo_kanan_path, x_logo_kanan, y_logo_kanan, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
         except Exception:
             pass
 
-    # KOP
+    # Kop Surat
     c.setFont("Helvetica-Bold", 12)
     c.drawCentredString(width / 2, y, "PEMERINTAH KABUPATEN BANTUL")
     y -= 5 * mm
@@ -227,12 +205,10 @@ def draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_target, sel_tgl_ttd)
     c.drawCentredString(width / 2, y, "SMP NEGERI 2 BANGUNTAPAN")
     y -= 1 * mm
 
-    # Aksara Jawa
     aksara_path = "assets/aksara_jawa.jpg"
     if os.path.exists(aksara_path):
         try:
-            aksara_w = 100 * mm
-            aksara_h = 10 * mm
+            aksara_w, aksara_h = 100 * mm, 10 * mm
             x_aksara = (width - aksara_w) / 2
             y_aksara = y - aksara_h
             c.drawImage(aksara_path, x_aksara, y_aksara, width=aksara_w, height=aksara_h, preserveAspectRatio=True, mask='auto')
@@ -253,7 +229,7 @@ def draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_target, sel_tgl_ttd)
     c.setFillColor(black)
     y -= 3 * mm
 
-    # Garis separator (double)
+    # Garis Pembatas Kop
     c.setLineWidth(1)
     c.line(margin_left, y, width - margin_right, y)
     y -= 1.5 * mm
@@ -261,71 +237,64 @@ def draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_target, sel_tgl_ttd)
     c.line(margin_left, y, width - margin_right, y)
     y -= 10 * mm
 
-    # Judul
+    # Judul Dokumen
     c.setFont("Helvetica-Bold", 12)
     c.drawCentredString(width / 2, y, f"LAPORAN HASIL {sel_asesmen}")
     y -= 6 * mm
     c.drawCentredString(width / 2, y, f"TAHUN PELAJARAN {sel_tahun}")
     y -= 12 * mm
 
-    # Identitas siswa
+    # Identitas Siswa
     id_margin_left = margin_left + 10 * mm
     label_w = 20 * mm
     colon_x = id_margin_left + label_w
     value_x = colon_x + 5
     c.setFont("Helvetica", 12)
 
-    # Nama
     c.drawString(id_margin_left, y, "Nama")
     c.drawString(colon_x, y, ":")
     c.drawString(value_x, y, " " + str(row.get("Nama Siswa", "")))
     y -= 6 * mm
-    # NIS
+
     c.drawString(id_margin_left, y, "NIS")
     c.drawString(colon_x, y, ":")
     c.drawString(value_x, y, " " + str(row.get("NIS", "")))
     y -= 6 * mm
-    # Kelas
+
     c.drawString(id_margin_left, y, "Kelas")
     c.drawString(colon_x, y, ":")
     c.drawString(value_x, y, " " + str(row.get("Kelas", "")))
     y -= 10 * mm
 
-    # Ambil nilai mapel target
+    # Pengambilan Nilai
     nilai_list = []
     for subj in mapel_target:
         raw = row.get(subj, np.nan)
-        if pd.isna(raw):
+        try:
+            nilai_list.append(float(raw) if pd.notna(raw) else np.nan)
+        except Exception:
             nilai_list.append(np.nan)
-        else:
-            try:
-                nilai_list.append(float(raw))
-            except Exception:
-                nilai_list.append(np.nan)
-    nilai_series = pd.Series(nilai_list, index=mapel_target, dtype="float64")
 
+    nilai_series = pd.Series(nilai_list, index=mapel_target, dtype="float64")
     jumlah = float(nilai_series.sum(skipna=True))
     rata2 = float(nilai_series.mean(skipna=True)) if nilai_series.count() > 0 else 0.0
 
-    # TABEL
+    # Format Tabel
     row_height = 7 * mm
     font_size = 11
-    col_no_w = 15 * mm
-    col_mapel_w = 90 * mm
-    col_nilai_w = 25 * mm
+    col_no_w, col_mapel_w, col_nilai_w = 15 * mm, 90 * mm, 25 * mm
     table_width = col_no_w + col_mapel_w + col_nilai_w
 
     x0 = margin_left + (content_width - table_width) / 2
     y0 = y
-    nrows = len(mapel_target) + 3  # Header + Mapel + Jumlah + Rata-rata
+    nrows = len(mapel_target) + 3
 
-    # Header background
-    header_y_bottom = y0 - row_height
+    # Header Background
     c.setFillColor(lightgrey)
-    c.rect(x0, header_y_bottom, table_width, row_height, stroke=0, fill=1)
+    c.rect(x0, y0 - row_height, table_width, row_height, stroke=0, fill=1)
     c.setFillColor(black)
 
-    # Grid
+    # Line Grid
     for r in range(nrows + 1):
         c.setLineWidth(0.5)
         c.line(x0, y0 - r * row_height, x0 + table_width, y0 - r * row_height)
@@ -334,37 +303,32 @@ def draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_target, sel_tgl_ttd)
     c.line(x0 + col_no_w + col_mapel_w, y0, x0 + col_no_w + col_mapel_w, y0 - nrows * row_height)
     c.line(x0 + table_width, y0, x0 + table_width, y0 - nrows * row_height)
 
-    # Header teks
+    # Header Text
     c.setFont("Helvetica-Bold", font_size)
-    header_center = y0 - row_height / 2
-    adj_y = header_center - (font_size / 3.5)
+    adj_y = (y0 - row_height / 2) - (font_size / 3.5)
     c.drawCentredString(x0 + col_no_w / 2, adj_y, "No")
     c.drawCentredString(x0 + col_no_w + col_mapel_w / 2, adj_y, "Mata Pelajaran")
     c.drawCentredString(x0 + col_no_w + col_mapel_w + col_nilai_w / 2, adj_y, "Nilai")
 
-    # Isi tabel
+    # Body Text
     c.setFont("Helvetica", font_size)
     y_text = y0 - row_height
     for i, subj in enumerate(mapel_target, start=1):
-        cell_middle = y_text - row_height / 2
-        adj_y = cell_middle - (font_size / 3.5)
+        adj_y = (y_text - row_height / 2) - (font_size / 3.5)
         val = nilai_series.get(subj, np.nan)
-        val_str = format_score(val)
         c.drawCentredString(x0 + col_no_w / 2, adj_y, str(i))
         c.drawString(x0 + col_no_w + 2 * mm, adj_y, subj)
-        c.drawCentredString(x0 + col_no_w + col_mapel_w + col_nilai_w / 2, adj_y, val_str)
+        c.drawCentredString(x0 + col_no_w + col_mapel_w + col_nilai_w / 2, adj_y, format_score(val))
         y_text -= row_height
 
     # Jumlah & Rata-rata
-    cell_middle = y_text - row_height / 2
-    adj_y = cell_middle - (font_size / 3.5)
+    adj_y = (y_text - row_height / 2) - (font_size / 3.5)
     c.setFont("Helvetica-Bold", font_size)
     c.drawString(x0 + col_no_w + 2 * mm, adj_y, "Jumlah")
     c.drawCentredString(x0 + col_no_w + col_mapel_w + col_nilai_w / 2, adj_y, format_score(jumlah))
     y_text -= row_height
 
-    cell_middle = y_text - row_height / 2
-    adj_y = cell_middle - (font_size / 3.5)
+    adj_y = (y_text - row_height / 2) - (font_size / 3.5)
     c.drawString(x0 + col_no_w + 2 * mm, adj_y, "Rata-rata")
     c.drawCentredString(x0 + col_no_w + col_mapel_w + col_nilai_w / 2, adj_y, format_score(rata2))
     y_text -= row_height + 20
@@ -397,11 +361,10 @@ def draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_target, sel_tgl_ttd)
     y_ttd_after -= 6 * mm
     c.drawString(x_ttd, y_ttd_after, "NIP 198001052009032006")
 
-# PDF generator
+# Fungsi Generator PDF
 def make_pdf_for_student(row, sel_tgl_ttd):
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
-    # Tentukan mapel dinamis sesuai kelas dari baris siswa
     mapel_target = get_mapel_by_kelas(row["Kelas"])
     draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_target, sel_tgl_ttd)
     c.showPage()
@@ -431,34 +394,4 @@ def make_pdf_for_all_classes(df_all, kelas_list_all, sel_tgl_ttd):
             c.showPage()
     c.save()
     buffer.seek(0)
-    return buffer
-
-st.markdown("---")
-st.subheader("Pilih Siswa & Unduh Laporan")
-
-if df_kelas.empty:
-    st.warning("Tidak ada data siswa untuk kelas ini.")
-else:
-    if sel_siswa != "-- Semua Siswa --":
-        row_siswa = df_kelas[df_kelas["Nama Siswa"] == sel_siswa].iloc[0]
-        st.download_button(
-            "📄 Download PDF (Per Siswa)",
-            data=make_pdf_for_student(row_siswa, sel_tgl_ttd),
-            file_name=f"Laporan_{row_siswa['Nama Siswa']}.pdf",
-            mime="application/pdf"
-        )
-
-    st.download_button(
-        "📄 Download PDF (Per Kelas)",
-        data=make_pdf_for_class(df_kelas, sel_tgl_ttd),
-        file_name=f"Laporan_{sel_kelas}.pdf",
-        mime="application/pdf"
-    )
-
-    if len(kelas_list) > 1:
-        st.download_button(
-            "📚 Download PDF (Semua Kelas)",
-            data=make_pdf_for_all_classes(df, kelas_list, sel_tgl_ttd),
-            file_name=f"Laporan_Semua_Kelas_{sel_tahun}.pdf",
-            mime="application/pdf"
-        )
+    return
