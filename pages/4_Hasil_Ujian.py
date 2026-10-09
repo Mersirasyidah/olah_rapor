@@ -10,7 +10,7 @@ from reportlab.lib.colors import blue, black, lightgrey
 from datetime import datetime
 
 # Pastikan Anda sudah menginstal reportlab dan openpyxl:
-# pip install streamlit numpy pandas reportlab openpyxl openpyxl
+# pip install streamlit numpy pandas reportlab openpyxl
 
 # === Mapel per jenjang ===
 # Daftar mata pelajaran untuk Kelas 8 dan Kelas 9 (Mengandung Seni Budaya)
@@ -45,6 +45,16 @@ mapel_kelas_7 = [
 
 # Gabungan semua mapel (untuk template Excel)
 mapel_semua = sorted(set(mapel_kelas_8_9) | set(mapel_kelas_7))
+
+# Helper penentu daftar mapel berdasarkan nama kelas
+def get_mapel_by_kelas(kelas_name):
+    kelas_str = str(kelas_name).upper().strip()
+    # Jika diawali "7" atau "VII", gunakan mapel Kelas 7 (Prakarya)
+    if kelas_str.startswith("VII") or kelas_str.startswith("7"):
+        return mapel_kelas_7
+    # Untuk Kelas 8 dan Kelas 9, gunakan mapel Kelas 8 & 9 (Seni Budaya)
+    else:
+        return mapel_kelas_8_9
 
 # Mapping bulan Indonesia
 bulan_id = {
@@ -100,7 +110,7 @@ if not uploaded:
     st.info("Silakan unggah file Excel nilai (menggunakan template).")
     st.stop()
 
-# baca file
+# Baca file
 try:
     df = pd.read_excel(uploaded, engine="openpyxl")
 except Exception as e:
@@ -114,55 +124,13 @@ if "Kelas" not in df.columns:
     st.error("Kolom 'Kelas' tidak ditemukan di file. Pastikan pakai template.")
     st.stop()
 
-kelas_list = sorted(df["Kelas"].astype(str).unique())
-sel_kelas = st.selectbox("Pilih Kelas", kelas_list)
-# Tambahan: opsi cetak semua paralel (tetap aman — tidak mengubah data lama)
-semua_paralel = st.checkbox("Cetak semua kelas ?", value=False)
-
-# Jika user minta semua paralel, override df_kelas menjadi semua kelas dengan prefix yang sama
-if semua_paralel:
-    # ambil prefix (angka depan), aman untuk format '9A' atau 'IX...' bila sekolah pakai angka
-    prefix = str(sel_kelas).strip()[0]
-    df_kelas = df[df["Kelas"].astype(str).str.startswith(prefix)].copy()
-else:
-    df_kelas = df[df["Kelas"].astype(str) == str(sel_kelas)].copy()
-
-# Tentukan mapel sesuai jenjang
-kelas_upper = str(sel_kelas).upper().strip()
-
-# LOGIKA UTAMA: Cek apakah kelas adalah Kelas 7 (VII atau 7)
-# Jika kelas dimulai dengan "VII" atau "7", gunakan mapel Kelas 7 (Prakarya)
-if kelas_upper.startswith("VII") or kelas_upper.startswith("7"):
-    # Gunakan daftar mapel Kelas 7 (Prakarya)
-    mapel_urut = [m for m in mapel_kelas_7 if m in df.columns]
-else:
-    # Gunakan daftar mapel Kelas 8/9 (Seni Budaya)
-    mapel_urut = [m for m in mapel_kelas_8_9 if m in df.columns]
-
-# Pastikan kolom penting ada
-expected_base = ["Kelas", "NIS", "Nama Siswa"]
-missing_base = [c for c in expected_base if c not in df.columns]
-if missing_base:
-    st.error(f"Kolom wajib hilang: {missing_base}")
-    st.stop()
-
-# Pastikan mapel yang diperlukan ada di file (jika tidak ada, beri peringatan)
-missing_mapel = [m for m in mapel_urut if m not in df.columns]
-if missing_mapel:
-    st.warning(f"Beberapa mata pelajaran tidak ditemukan di file dan akan diperlakukan kosong: {missing_mapel}")
-    # tambahkan kolom kosong agar tidak error saat indexing
-    for m in missing_mapel:
+# Pastikan semua kolom mapel ada di df agar tidak error saat diakses
+for m in mapel_semua:
+    if m not in df.columns:
         df[m] = np.nan
-    # recompute df_kelas (kalau perlu)
-    if semua_paralel:
-        prefix = str(sel_kelas).strip()[0]
-        df_kelas = df[df["Kelas"].astype(str).str.startswith(prefix)].copy()
-    else:
-        df_kelas = df[df["Kelas"].astype(str) == str(sel_kelas)].copy()
 
 # Bersihkan & konversi nilai pada semua kolom mapel yang ada di df
-for col in [c for c in mapel_semua if c in df.columns]:
-    # ubah ke string, ganti koma, hapus karakter non-digit kecuali . dan -, trim
+for col in mapel_semua:
     df[col] = (
         df[col]
         .astype(str)
@@ -170,42 +138,47 @@ for col in [c for c in mapel_semua if c in df.columns]:
         .str.replace(r"[^0-9.\-]", "", regex=True)
         .str.strip()
     )
-    # kosongkan string hasil pembersihan yang menjadi ''
     df.loc[df[col] == "", col] = np.nan
-    # konversi ke numeric
     df[col] = pd.to_numeric(df[col], errors="coerce")
 
-# Pastikan ulang df_kelas kolom tersedia
-df = df[["Kelas", "NIS", "Nama Siswa"] + [m for m in mapel_urut if m in df.columns]]
-# recompute df_kelas again to align with df columns if needed
+kelas_list = sorted(df["Kelas"].astype(str).unique())
+sel_kelas = st.selectbox("Pilih Kelas", kelas_list)
+
+# Tambahan: opsi cetak semua paralel
+semua_paralel = st.checkbox("Cetak semua kelas ?", value=False)
+
 if semua_paralel:
     prefix = str(sel_kelas).strip()[0]
     df_kelas = df[df["Kelas"].astype(str).str.startswith(prefix)].copy()
 else:
     df_kelas = df[df["Kelas"].astype(str) == str(sel_kelas)].copy()
 
-# Pilih siswa (selalu definisikan, hindari NameError)
+# Tentukan mapel urut untuk kelas yang sedang dipilih saat ini
+mapel_urut = get_mapel_by_kelas(sel_kelas)
+
+# Pastikan kolom wajib dasar ada
+expected_base = ["Kelas", "NIS", "Nama Siswa"]
+missing_base = [c for c in expected_base if c not in df.columns]
+if missing_base:
+    st.error(f"Kolom wajib hilang: {missing_base}")
+    st.stop()
+
+# Pilih siswa
 siswa_list = df_kelas["Nama Siswa"].astype(str).tolist()
 sel_siswa = st.selectbox("Pilih Siswa", ["-- Semua Siswa --"] + siswa_list)
 
-# helper: format skor aman
+# Helper: format skor aman
 def format_score(val):
     if pd.isna(val):
         return ""
     try:
         num = float(val)
-        # SELALU tampilkan dua angka di belakang koma
         return f"{num:.2f}"
     except Exception:
-        # coba convert dari string yang mungkin masih berformat koma
-        try:
-            num = float(str(val).strip().replace(",", "."))
-            return f"{num:.2f}"
-        except Exception:
-            return str(val)
+        return str(val)
 
 # Fungsi gambar halaman siswa DENGAN MARGIN
-def draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_urut, sel_tgl_ttd):
+def draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_target, sel_tgl_ttd):
     width, height = A4
 
     # === PENGATURAN MARGIN ===
@@ -220,120 +193,107 @@ def draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_urut, sel_tgl_ttd):
     # Titik awal Y (di dalam margin atas)
     y = height - margin_top
 
-    # (Optional) logo kiri atas
+    # Logo kiri atas
     logo_path = "assets/logo_kiri.png"
-    try:
-        logo_w = 30*mm
-        logo_h = 30*mm
-        # Posisikan logo di margin_left
-        x_logo = margin_left - 10*mm
-        # Posisi Y disesuaikan agar naik (penyesuaian dari -10*mm menjadi -5*mm)
-        y_logo = height - margin_top - (-10*mm) - logo_h
-        c.drawImage(logo_path, x_logo, y_logo, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
-    except Exception as e:
-        # Menghilangkan error jika gambar tidak ditemukan
-        pass
+    if os.path.exists(logo_path):
+        try:
+            logo_w = 30 * mm
+            logo_h = 30 * mm
+            x_logo = margin_left - 10 * mm
+            y_logo = height - margin_top - (-10 * mm) - logo_h
+            c.drawImage(logo_path, x_logo, y_logo, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
+        except Exception:
+            pass
 
-    # =========================
-    # LOGO KANAN ATAS
-    # =========================
+    # Logo kanan atas
     logo_kanan_path = "assets/logo_kanan.png"
-    try:
-        logo_w = 30*mm
-        logo_h = 30*mm
+    if os.path.exists(logo_kanan_path):
+        try:
+            logo_w = 30 * mm
+            logo_h = 30 * mm
+            x_logo_kanan = width - margin_right - logo_w + 5 * mm
+            y_logo_kanan = height - margin_top - (-10 * mm) - logo_h 
+            c.drawImage(logo_kanan_path, x_logo_kanan, y_logo_kanan, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
+        except Exception:
+            pass
 
-        # Posisi logo dari sisi kanan
-        x_logo_kanan = width - margin_right - logo_w + 5*mm
-
-        # Tinggi dibuat sama dengan logo kiri
-        y_logo_kanan = height - margin_top - (-10*mm) - logo_h 
-
-        c.drawImage(
-            logo_kanan_path,
-            x_logo_kanan,
-            y_logo_kanan,
-            width=logo_w,
-            height=logo_h,
-            preserveAspectRatio=True,
-            mask='auto'
-        )
-    except Exception:
-        pass
-
-    
-    # KOP sederhana (CentredString tidak dipengaruhi margin kiri/kanan)
+    # KOP
     c.setFont("Helvetica-Bold", 12)
-    c.drawCentredString(width/2, y, "PEMERINTAH KABUPATEN BANTUL")
-    y -= 5*mm
-    c.drawCentredString(width/2, y, "DINAS PENDIDIKAN, KEPEMUDAAN, DAN OLAHRAGA")
-    y -= 5*mm
+    c.drawCentredString(width / 2, y, "PEMERINTAH KABUPATEN BANTUL")
+    y -= 5 * mm
+    c.drawCentredString(width / 2, y, "DINAS PENDIDIKAN, KEPEMUDAAN, DAN OLAHRAGA")
+    y -= 5 * mm
     c.setFont("Helvetica-Bold", 14)
-    c.drawCentredString(width/2, y, "SMP NEGERI 2 BANGUNTAPAN")
-    y -= 1*mm
+    c.drawCentredString(width / 2, y, "SMP NEGERI 2 BANGUNTAPAN")
+    y -= 1 * mm
 
-    # (Optional) aksara jawa
+    # Aksara Jawa
     aksara_path = "assets/aksara_jawa.jpg"
-    try:
-        aksara_w = 100*mm
-        aksara_h = 10*mm
-        x_aksara = (width - aksara_w) / 2
-        y_aksara = y - aksara_h
-        c.drawImage(aksara_path, x_aksara, y_aksara, width=aksara_w, height=aksara_h, preserveAspectRatio=True, mask='auto')
-        y = y_aksara - 2*mm
-    except Exception as e:
-        y -= 4*mm
+    if os.path.exists(aksara_path):
+        try:
+            aksara_w = 100 * mm
+            aksara_h = 10 * mm
+            x_aksara = (width - aksara_w) / 2
+            y_aksara = y - aksara_h
+            c.drawImage(aksara_path, x_aksara, y_aksara, width=aksara_w, height=aksara_h, preserveAspectRatio=True, mask='auto')
+            y = y_aksara - 2 * mm
+        except Exception:
+            y -= 4 * mm
+    else:
+        y -= 4 * mm
 
     c.setFont("Helvetica-Oblique", 10)
-    c.drawCentredString(width/2, y, "Jalan Karangsari, Banguntapan, Kabupaten Bantul, Yogyakarta 55198")
-    y -= 5*mm
-    c.drawCentredString(width/2, y, "Telp. (0274) 382754 382754")
-    y -= 5*mm
+    c.drawCentredString(width / 2, y, "Jalan Karangsari, Banguntapan, Kabupaten Bantul, Yogyakarta 55198")
+    y -= 5 * mm
+    c.drawCentredString(width / 2, y, "Telp. (0274) 382754 382754")
+    y -= 5 * mm
     c.setFont("Helvetica", 10)
     c.setFillColor(blue)
-    c.drawCentredString(width/2, y, "Laman : www.smpn2banguntapan.sch.id; Pos-el : smp2banguntapan@yahoo.com")
+    c.drawCentredString(width / 2, y, "Laman : www.smpn2banguntapan.sch.id; Pos-el : smp2banguntapan@yahoo.com")
     c.setFillColor(black)
-    y -= 3*mm
+    y -= 3 * mm
 
     # Garis separator (double)
     c.setLineWidth(1)
     c.line(margin_left, y, width - margin_right, y)
-    y -= 1.5*mm
+    y -= 1.5 * mm
     c.setLineWidth(0.5)
     c.line(margin_left, y, width - margin_right, y)
-    y -= 10*mm
+    y -= 10 * mm
 
     # Judul
     c.setFont("Helvetica-Bold", 12)
-    c.drawCentredString(width/2, y, f"LAPORAN HASIL {sel_asesmen}")
-    y -= 6*mm
-    c.drawCentredString(width/2, y, f"TAHUN PELAJARAN {sel_tahun}")
-    y -= 12*mm
+    c.drawCentredString(width / 2, y, f"LAPORAN HASIL {sel_asesmen}")
+    y -= 6 * mm
+    c.drawCentredString(width / 2, y, f"TAHUN PELAJARAN {sel_tahun}")
+    y -= 12 * mm
 
-    # Identitas siswa (titik dua rata)
-    id_margin_left = margin_left + 10*mm
-    label_w = 20*mm
+    # Identitas siswa
+    id_margin_left = margin_left + 10 * mm
+    label_w = 20 * mm
     colon_x = id_margin_left + label_w
     value_x = colon_x + 5
     c.setFont("Helvetica", 12)
+
     # Nama
     c.drawString(id_margin_left, y, "Nama")
     c.drawString(colon_x, y, ":")
     c.drawString(value_x, y, " " + str(row.get("Nama Siswa", "")))
-    y -= 6*mm
+    y -= 6 * mm
     # NIS
     c.drawString(id_margin_left, y, "NIS")
     c.drawString(colon_x, y, ":")
     c.drawString(value_x, y, " " + str(row.get("NIS", "")))
-    y -= 6*mm
+    y -= 6 * mm
     # Kelas
     c.drawString(id_margin_left, y, "Kelas")
     c.drawString(colon_x, y, ":")
     c.drawString(value_x, y, " " + str(row.get("Kelas", "")))
-    y -= 10*mm
+    y -= 10 * mm
 
-    # Ambil nilai mapel (pastikan numeric)
+    # Ambil nilai mapel target
     nilai_list = []
-    for subj in mapel_urut:
+    for subj in mapel_target:
         raw = row.get(subj, np.nan)
         if pd.isna(raw):
             nilai_list.append(np.nan)
@@ -341,143 +301,133 @@ def draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_urut, sel_tgl_ttd):
             try:
                 nilai_list.append(float(raw))
             except Exception:
-                try:
-                    nilai_list.append(float(str(raw).strip().replace(",", ".")))
-                except Exception:
-                    nilai_list.append(np.nan)
-    nilai_series = pd.Series(nilai_list, index=mapel_urut, dtype="float64")
+                nilai_list.append(np.nan)
+    nilai_series = pd.Series(nilai_list, index=mapel_target, dtype="float64")
 
     jumlah = float(nilai_series.sum(skipna=True))
     rata2 = float(nilai_series.mean(skipna=True)) if nilai_series.count() > 0 else 0.0
 
     # TABEL
-    row_height = 7*mm
+    row_height = 7 * mm
     font_size = 11
-    col_no_w = 15*mm
-    col_mapel_w = 90*mm
-    col_nilai_w = 25*mm
+    col_no_w = 15 * mm
+    col_mapel_w = 90 * mm
+    col_nilai_w = 25 * mm
     table_width = col_no_w + col_mapel_w + col_nilai_w
-    # Posisikan tabel di tengah area konten
+
     x0 = margin_left + (content_width - table_width) / 2
     y0 = y
-    nrows = len(mapel_urut) + 2 + 1  # header + mapel + jumlah + rata2
+    nrows = len(mapel_target) + 3  # Header + Mapel + Jumlah + Rata-rata
 
-    # header background (gambar dulu)
+    # Header background
     header_y_bottom = y0 - row_height
     c.setFillColor(lightgrey)
     c.rect(x0, header_y_bottom, table_width, row_height, stroke=0, fill=1)
     c.setFillColor(black)
 
-    # gambar grid
-    for r in range(nrows+1):
+    # Grid
+    for r in range(nrows + 1):
         c.setLineWidth(0.5)
-        c.line(x0, y0 - r*row_height, x0 + table_width, y0 - r*row_height)
-    c.line(x0, y0, x0, y0 - nrows*row_height)
-    c.line(x0 + col_no_w, y0, x0 + col_no_w, y0 - nrows*row_height)
-    c.line(x0 + col_no_w + col_mapel_w, y0, x0 + col_no_w + col_mapel_w, y0 - nrows*row_height)
-    c.line(x0 + table_width, y0, x0 + table_width, y0 - nrows*row_height)
+        c.line(x0, y0 - r * row_height, x0 + table_width, y0 - r * row_height)
+    c.line(x0, y0, x0, y0 - nrows * row_height)
+    c.line(x0 + col_no_w, y0, x0 + col_no_w, y0 - nrows * row_height)
+    c.line(x0 + col_no_w + col_mapel_w, y0, x0 + col_no_w + col_mapel_w, y0 - nrows * row_height)
+    c.line(x0 + table_width, y0, x0 + table_width, y0 - nrows * row_height)
 
-    # header teks (vertical center correction)
+    # Header teks
     c.setFont("Helvetica-Bold", font_size)
-    header_center = y0 - row_height/2
-    adj_y = header_center - (font_size/3.5)
-    c.drawCentredString(x0 + col_no_w/2, adj_y, "No")
-    c.drawCentredString(x0 + col_no_w + col_mapel_w/2, adj_y, "Mata Pelajaran")
-    c.drawCentredString(x0 + col_no_w + col_mapel_w + col_nilai_w/2, adj_y, "Nilai")
+    header_center = y0 - row_height / 2
+    adj_y = header_center - (font_size / 3.5)
+    c.drawCentredString(x0 + col_no_w / 2, adj_y, "No")
+    c.drawCentredString(x0 + col_no_w + col_mapel_w / 2, adj_y, "Mata Pelajaran")
+    c.drawCentredString(x0 + col_no_w + col_mapel_w + col_nilai_w / 2, adj_y, "Nilai")
 
-    # isi tabel
+    # Isi tabel
     c.setFont("Helvetica", font_size)
     y_text = y0 - row_height
-    for i, subj in enumerate(mapel_urut, start=1):
-        cell_middle = y_text - row_height/2
-        adj_y = cell_middle - (font_size/3.5)
+    for i, subj in enumerate(mapel_target, start=1):
+        cell_middle = y_text - row_height / 2
+        adj_y = cell_middle - (font_size / 3.5)
         val = nilai_series.get(subj, np.nan)
         val_str = format_score(val)
-        c.drawCentredString(x0 + col_no_w/2, adj_y, str(i))
-        c.drawString(x0 + col_no_w + 2*mm, adj_y, subj)
-        c.drawCentredString(x0 + col_no_w + col_mapel_w + col_nilai_w/2, adj_y, val_str)
+        c.drawCentredString(x0 + col_no_w / 2, adj_y, str(i))
+        c.drawString(x0 + col_no_w + 2 * mm, adj_y, subj)
+        c.drawCentredString(x0 + col_no_w + col_mapel_w + col_nilai_w / 2, adj_y, val_str)
         y_text -= row_height
 
-    # Jumlah & Rata-rata (rata kiri teks label)
-    cell_middle = y_text - row_height/2
-    adj_y = cell_middle - (font_size/3.5)
+    # Jumlah & Rata-rata
+    cell_middle = y_text - row_height / 2
+    adj_y = cell_middle - (font_size / 3.5)
     c.setFont("Helvetica-Bold", font_size)
-    c.drawString(x0 + col_no_w + 2*mm, adj_y, "Jumlah")
-    c.drawCentredString(x0 + col_no_w + col_mapel_w + col_nilai_w/2, adj_y, format_score(jumlah))
+    c.drawString(x0 + col_no_w + 2 * mm, adj_y, "Jumlah")
+    c.drawCentredString(x0 + col_no_w + col_mapel_w + col_nilai_w / 2, adj_y, format_score(jumlah))
     y_text -= row_height
 
-    cell_middle = y_text - row_height/2
-    adj_y = cell_middle - (font_size/3.5)
-    c.drawString(x0 + col_no_w + 2*mm, adj_y, "Rata-rata")
-    c.drawCentredString(x0 + col_no_w + col_mapel_w + col_nilai_w/2, adj_y, format_score(rata2))
+    cell_middle = y_text - row_height / 2
+    adj_y = cell_middle - (font_size / 3.5)
+    c.drawString(x0 + col_no_w + 2 * mm, adj_y, "Rata-rata")
+    c.drawCentredString(x0 + col_no_w + col_mapel_w + col_nilai_w / 2, adj_y, format_score(rata2))
     y_text -= row_height + 20
 
-    # tanda tangan
-    # GUNAKAN TANGGAL PILIHAN DARI STREAMLIT (sel_tgl_ttd)
+    # Tanda tangan
     ttd_date = sel_tgl_ttd
     bulan_eng = ttd_date.strftime('%B')
-    tgl = f"{ttd_date.day} {bulan_id[bulan_eng]} {ttd_date.year}"
+    tgl = f"{ttd_date.day} {bulan_id.get(bulan_eng, bulan_eng)} {ttd_date.year}"
 
-    # Posisikan tanda tangan berdasarkan margin_right dan margin_bottom
-    x_ttd = width - margin_right - 70*mm
-    y_ttd_start = margin_bottom + 62*mm
+    x_ttd = width - margin_right - 70 * mm
+    y_ttd_start = margin_bottom + 62 * mm
 
     c.setFont("Helvetica", 12)
     c.drawString(x_ttd, y_ttd_start, f"Banguntapan, {tgl}")
-    y_ttd_start -= 8*mm
+    y_ttd_start -= 8 * mm
     c.drawString(x_ttd, y_ttd_start, "Mengetahui,")
-    y_ttd_start -= 5*mm
+    y_ttd_start -= 5 * mm
     c.drawString(x_ttd, y_ttd_start, "Kepala Sekolah,")
-    y_ttd_start -= -1*mm
-    # Tambah gambar tanda tangan (cek file)
+    y_ttd_start -= -1 * mm
+
     ttd_path = "assets/ttd_kepsek.jpeg"
     if os.path.exists(ttd_path):
         try:
-            c.drawImage(ttd_path, x_ttd, y_ttd_start - 22*mm, width=40*mm, height=20*mm, mask="auto")
+            c.drawImage(ttd_path, x_ttd, y_ttd_start - 22 * mm, width=40 * mm, height=20 * mm, mask="auto")
         except Exception:
             pass
 
-    # Nama & NIP (tetap ditampilkan)
-    y_ttd_after = y_ttd_start - 25*mm
+    y_ttd_after = y_ttd_start - 25 * mm
     c.drawString(x_ttd, y_ttd_after, "Alina Fiftiyani Nurjannah, M.Pd.")
-    y_ttd_after -= 6*mm
+    y_ttd_after -= 6 * mm
     c.drawString(x_ttd, y_ttd_after, "NIP 198001052009032006")
-    
+
 # PDF generator
-def make_pdf_for_student(row, mapel_urut, sel_tgl_ttd):
+def make_pdf_for_student(row, sel_tgl_ttd):
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
-    # TERUSKAN sel_tgl_ttd KE draw_student_page
-    draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_urut, sel_tgl_ttd)
+    # Tentukan mapel dinamis sesuai kelas dari baris siswa
+    mapel_target = get_mapel_by_kelas(row["Kelas"])
+    draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_target, sel_tgl_ttd)
     c.showPage()
     c.save()
     buffer.seek(0)
     return buffer
 
-def make_pdf_for_class(df_kelas, mapel_urut, sel_tgl_ttd):
+def make_pdf_for_class(df_k, sel_tgl_ttd):
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
-    for _, row in df_kelas.iterrows():
-        # TERUSKAN sel_tgl_ttd KE draw_student_page
-        draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_urut, sel_tgl_ttd)
+    for _, row in df_k.iterrows():
+        mapel_target = get_mapel_by_kelas(row["Kelas"])
+        draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_target, sel_tgl_ttd)
         c.showPage()
     c.save()
     buffer.seek(0)
     return buffer
 
-# Tambahan: fungsi untuk semua kelas paralel (jika ingin semua kelas di file)
-def make_pdf_for_all_classes(df_all, kelas_list_all, mapel_kelas_8_9, mapel_kelas_7, sel_tgl_ttd):
+def make_pdf_for_all_classes(df_all, kelas_list_all, sel_tgl_ttd):
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
-    for kelas in kelas_list_all:
-        kelas_upper = str(kelas).upper().strip()
-        if kelas_upper.startswith("IX") or kelas_upper.startswith("9"):
-            mapel_u = [m for m in mapel_kelas_7 if m in df_all.columns]
-        else:
-            mapel_u = [m for m in mapel_kelas_8_9 if m in df_all.columns]
-        df_sel = df_all[df_all["Kelas"].astype(str) == str(kelas)]
+    for k in kelas_list_all:
+        df_sel = df_all[df_all["Kelas"].astype(str) == str(k)]
         for _, row in df_sel.iterrows():
-            draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_u, sel_tgl_ttd)
+            mapel_target = get_mapel_by_kelas(row["Kelas"])
+            draw_student_page(c, row, sel_asesmen, sel_tahun, mapel_target, sel_tgl_ttd)
             c.showPage()
     c.save()
     buffer.seek(0)
@@ -486,29 +436,29 @@ def make_pdf_for_all_classes(df_all, kelas_list_all, mapel_kelas_8_9, mapel_kela
 st.markdown("---")
 st.subheader("Pilih Siswa & Unduh Laporan")
 
-# Buttons (hanya tampil jika df_kelas tidak kosong)
 if df_kelas.empty:
     st.warning("Tidak ada data siswa untuk kelas ini.")
 else:
     if sel_siswa != "-- Semua Siswa --":
-        row = df_kelas[df_kelas["Nama Siswa"] == sel_siswa].iloc[0]
-        # TERUSKAN sel_tgl_ttd
-        st.download_button("📄 Download PDF (Per Siswa)",
-                           data=make_pdf_for_student(row, mapel_urut, sel_tgl_ttd),
-                           file_name=f"Laporan_{row['Nama Siswa']}.pdf",
-                           mime="application/pdf")
+        row_siswa = df_kelas[df_kelas["Nama Siswa"] == sel_siswa].iloc[0]
+        st.download_button(
+            "📄 Download PDF (Per Siswa)",
+            data=make_pdf_for_student(row_siswa, sel_tgl_ttd),
+            file_name=f"Laporan_{row_siswa['Nama Siswa']}.pdf",
+            mime="application/pdf"
+        )
 
-    # TERUSKAN sel_tgl_ttd
-    st.download_button("📄 Download PDF (Per Kelas)",
-                       data=make_pdf_for_class(df_kelas, mapel_urut, sel_tgl_ttd),
-                       file_name=f"Laporan_{sel_kelas}.pdf",
-                       mime="application/pdf")
+    st.download_button(
+        "📄 Download PDF (Per Kelas)",
+        data=make_pdf_for_class(df_kelas, sel_tgl_ttd),
+        file_name=f"Laporan_{sel_kelas}.pdf",
+        mime="application/pdf"
+    )
 
-    # Jika user ingin seluruh kelas paralel sekaligus (tombol tambahan)
     if len(kelas_list) > 1:
         st.download_button(
-            "📚 Download PDF (Semua kelas)",
-            data=make_pdf_for_all_classes(df, kelas_list, mapel_kelas_8_9, mapel_kelas_7, sel_tgl_ttd),
+            "📚 Download PDF (Semua Kelas)",
+            data=make_pdf_for_all_classes(df, kelas_list, sel_tgl_ttd),
             file_name=f"Laporan_Semua_Kelas_{sel_tahun}.pdf",
             mime="application/pdf"
         )
