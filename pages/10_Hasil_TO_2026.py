@@ -281,17 +281,39 @@ for j in range(5):
     for i in range(5):
         c.drawCentredString(xs+col_no+col_m+(i*col_s)+col_s/2, y-1.5*row_h-2*mm, str(i+1))
 
-    # Data
-    y_row = y - 2*row_h
+    # --- Data ---
+    y_row = y - 2 * row_h
     c.setFont("Helvetica", 10)
     sums = [[] for _ in range(5)]
+
     for i, m in enumerate(mapel_urut, 1):
-        c.drawCentredString(xs+col_no/2, y_row-row_h/2-2*mm, str(i))
-        c.drawString(xs+col_no+2*mm, y_row-row_h/2-2*mm, m)
+        c.drawCentredString(
+            xs + col_no / 2,
+            y_row - row_h / 2 - 2 * mm,
+            str(i)
+        )
+
+        c.drawString(
+            xs + col_no + 2 * mm,
+            y_row - row_h / 2 - 2 * mm,
+            m
+        )
+
         for j in range(5):
             val = row.get(f"{m}_TKAD{j+1}", np.nan)
-            c.drawCentredString(xs+col_no+col_m+(j*col_s)+col_s/2, y_row-row_h/2-2*mm, format_val(val))
-            if not pd.isna(val): sums[j].append(float(val))
+
+            c.drawCentredString(
+                xs + col_no + col_m + (j * col_s) + col_s / 2,
+                y_row - row_h / 2 - 2 * mm,
+                format_val(val)
+            )
+
+            if not pd.isna(val):
+                try:
+                    sums[j].append(float(val))
+                except (ValueError, TypeError):
+                    pass
+
         y_row -= row_h
 
     # Footer
