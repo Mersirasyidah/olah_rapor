@@ -45,89 +45,20 @@ sel_tgl_ttd = st.date_input("Tanggal Tanda Tangan", datetime.now())
 uploaded = st.file_uploader("Unggah file Excel", type=["xlsx"])
 if not uploaded: st.stop()
 
-df = pd.read_excel(uploaded)
-df.columns = (
-    df.columns.astype(str)
-    .str.strip()
-    .str.replace(r"\s+", " ", regex=True)
-)
+df = pd.read_excel(uploaded).fillna(np.nan)
+df.columns = df.columns.str.strip()
 
-# Tampilkan nama kolom untuk pemeriksaan
-st.write("### Pemeriksaan Nama Kolom Excel")
-st.write(df.columns.tolist())
-
-# Pemeriksaan kolom nilai
-with st.expander("🔎 Diagnostik Data Nilai"):
-    st.write("Semua nama kolom:")
-    st.write(df.columns.tolist())
-
-    kolom_nilai = [
-        col for col in df.columns
-        if "TKAD" in str(col).upper()
-    ]
-
-    st.write("Kolom yang mengandung TKAD:")
-    st.write(kolom_nilai)
-
-    st.write("Contoh data nilai:")
-    st.dataframe(df.head())
-
-# === DIAGNOSTIK DAN PEMETAAN KOLOM NILAI ===
-def normalisasi_kolom(nama):
-    return "".join(ch.upper() for ch in str(nama) if ch.isalnum())
-
-kolom_asli = {
-    normalisasi_kolom(kolom): kolom
-    for kolom in df.columns
-}
-
-def cari_kolom_nilai(mapel, sesi):
-    nama_target = f"{mapel}_TKAD{sesi}"
-    return kolom_asli.get(normalisasi_kolom(nama_target))
-
-with st.expander("🔎 Diagnostik Kolom Nilai untuk PDF", expanded=True):
-    for mapel in mapel_tetap:
-        for sesi in range(1, 6):
-            kolom = cari_kolom_nilai(mapel, sesi)
-            if kolom:
-                st.write(f"✅ {mapel} sesi {sesi}: kolom `{kolom}`")
-            else:
-                st.warning(
-                    f"❌ Kolom {mapel}_TKAD{sesi} tidak ditemukan."
-                )
-
-    st.write("Contoh data Excel:")
-    st.dataframe(df.head())
-
-# === PERHITUNGAN RANKING PER SESI ===
+# Perhitungan Ranking Per Sesi
 for i in range(1, 6):
-    cols_sesi = [
-        cari_kolom_nilai(mapel, i)
-        for mapel in mapel_tetap
-    ]
-    cols_sesi = [kolom for kolom in cols_sesi if kolom is not None]
-
-    if cols_sesi:
-        nilai_sesi = df[cols_sesi].apply(
-            pd.to_numeric, errors="coerce"
-        )
-
-        df[f"Total_Sesi_{i}"] = nilai_sesi.sum(
-            axis=1, min_count=1
-        )
-
-        mask = nilai_sesi.notna().any(axis=1)
-
-        df[f"Peringkat_TKAD{i}"] = np.nan
-        df.loc[mask, f"Peringkat_TKAD{i}"] = (
-            df.loc[mask]
-            .assign(_total=df.loc[mask, f"Total_Sesi_{i}"])
-            .groupby("Kelas")["_total"]
-            .rank(ascending=False, method="min")
-        )
+    cols_sesi = [f"{m}_TKAD{i}" for m in mapel_tetap]
+    available = [c for c in cols_sesi if c in df.columns]
+    if available:
+        df[f"Total_Sesi_{i}"] = df[available].sum(axis=1, skipna=True)
+        mask = df[available].notna().any(axis=1)
+        df.loc[mask, f"Peringkat_TKAD{i}"] = df[mask].groupby("Kelas")[f"Total_Sesi_{i}"].rank(ascending=False, method="min")
     else:
         df[f"Peringkat_TKAD{i}"] = np.nan
-        
+
 kelas_list = sorted(df["Kelas"].astype(str).unique())
 sel_kelas = st.selectbox("Pilih Kelas", kelas_list)
 df_kelas = df[df["Kelas"].astype(str) == str(sel_kelas)].copy()
@@ -150,110 +81,37 @@ def draw_student_page(c, row):
     cw = width - ml - mr
     y = height - mt
 
-for j in range(5):
-    val = row.get(f"{m}_TKAD{j+1}", np.nan)
-    c.drawCentredString(
-        xs+col_no+col_m+(j*col_s)+col_s/2,
-        y_row-row_h/2-2*mm,
-        format_val(val)
-    )
-    if not pd.isna(val):
-        sums[j].append(float(val))
-
-    c.drawCentredString(
-        xs + col_no + col_m + (j * col_s) + col_s / 2,
-        y_row - row_h / 2 - 2 * mm,
-        format_val(val)
-    )
-
-    if pd.notna(val):
-        sums[j].append(float(val))
-
-    c.drawCentredString(
-        xs + col_no + col_m + (j * col_s) + col_s / 2,
-        y_row - row_h / 2 - 2 * mm,
-        format_val(val)
-    )
-
-    if pd.notna(val):
-        sums[j].append(float(val))
-
-    # Logo Kiri
+    # --- 1. KOP SURAT ---
     logo_path = "assets/logo_kiri.png"
     if os.path.exists(logo_path):
-        try:
-            logo_w, logo_h = 30 * mm, 30 * mm
-            x_logo = ml - 10 * mm
-            y_logo = height - mt - (-10 * mm) - logo_h
-            c.drawImage(logo_path, x_logo, y_logo, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
-        except Exception:
-            pass
-
-    # Logo Kanan
-    logo_kanan_path = "assets/logo_kanan.png"
-    if os.path.exists(logo_kanan_path):
-        try:
-            logo_w, logo_h = 30 * mm, 30 * mm
-            x_logo_kanan = width - mr - logo_w + 5 * mm
-            y_logo_kanan = height - mt - (-10 * mm) - logo_h 
-            c.drawImage(logo_kanan_path, x_logo_kanan, y_logo_kanan, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
-        except Exception:
-            pass
-            
-    # Logo Kanan
-    logo_kanan_path = "assets/logo_kanan.png"
-    if os.path.exists(logo_kanan_path):
-        try:
-            logo_w, logo_h = 30 * mm, 30 * mm
-            x_logo_kanan = width - margin_right - logo_w + 5 * mm
-            y_logo_kanan = height - margin_top - (-10 * mm) - logo_h 
-            c.drawImage(logo_kanan_path, x_logo_kanan, y_logo_kanan, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
-        except Exception:
-            pass
+        c.drawImage(logo_path, ml - 10*mm, y - 18*mm, width=28*mm, height=28*mm, preserveAspectRatio=True, mask='auto')
     
-    
-    # Kop Surat
     c.setFont("Helvetica-Bold", 12)
-    c.drawCentredString(width / 2, y, "PEMERINTAH KABUPATEN BANTUL")
-    y -= 5 * mm
-    c.drawCentredString(width / 2, y, "DINAS PENDIDIKAN, KEPEMUDAAN, DAN OLAHRAGA")
-    y -= 5 * mm
+    c.drawCentredString(width/2, y, "PEMERINTAH KABUPATEN BANTUL")
+    y -= 5*mm
+    c.drawCentredString(width/2, y, "DINAS PENDIDIKAN, KEPEMUDAAN, DAN OLAHRAGA")
+    y -= 5*mm
     c.setFont("Helvetica-Bold", 14)
-    c.drawCentredString(width / 2, y, "SMP NEGERI 2 BANGUNTAPAN")
-    y -= 1 * mm
+    c.drawCentredString(width/2, y, "SMP NEGERI 2 BANGUNTAPAN")
+    y -= 1*mm
 
+    # Aksara Jawa (Tetap Ukuran Besar)
     aksara_path = "assets/aksara_jawa.jpg"
     if os.path.exists(aksara_path):
-        try:
-            aksara_w, aksara_h = 100 * mm, 10 * mm
-            x_aksara = (width - aksara_w) / 2
-            y_aksara = y - aksara_h
-            c.drawImage(aksara_path, x_aksara, y_aksara, width=aksara_w, height=aksara_h, preserveAspectRatio=True, mask='auto')
-            y = y_aksara - 2 * mm
-        except Exception:
-            y -= 4 * mm
+        c.drawImage(aksara_path, (width-125*mm)/2, y - 13*mm, width=125*mm, height=12*mm, preserveAspectRatio=True, mask='auto')
+        y -= 14*mm
     else:
-        y -= 4 * mm
+        y -= 4*mm
 
     c.setFont("Helvetica-Oblique", 10)
-    c.drawCentredString(width / 2, y, "Jalan Karangsari, Banguntapan, Kabupaten Bantul, Yogyakarta 55198")
-    y -= 5 * mm
-    c.drawCentredString(width / 2, y, "Telp. (0274) 382754 382754")
-    y -= 5 * mm
-    c.setFont("Helvetica", 10)
-    c.setFillColor(blue)
-    c.drawCentredString(width / 2, y, "Laman : www.smpn2banguntapan.sch.id; Pos-el : smp2banguntapan@yahoo.com")
-    c.setFillColor(black)
-    y -= 3 * mm
-
-    # Garis Pembatas Kop
-    c.setLineWidth(1)
-    c.line(ml, y, width - mr, y)
-    y -= 1.5 * mm
-
-    c.setLineWidth(0.5)
-    c.line(ml, y, width - mr, y)
-    y -= 10 * mm
+    c.drawCentredString(width/2, y, "Jalan Karangsari, Banguntapan, Bantul, Yogyakarta 55198 Telp. 382754")
+    y -= 5*mm
+    c.setFont("Helvetica", 10); c.setFillColor(blue)
+    c.drawCentredString(width/2, y, "Website : www.smpn2banguntapan.sch.id Email : smp2banguntapan@yahoo.com")
+    c.setFillColor(black); y -= 3*mm
+    
+    c.setLineWidth(1.2); c.line(ml, y, width-mr, y)
+    y -= 10*mm # KEMBALI KE SEMULA (Sebelumnya 7mm)
 
     # --- 2. JUDUL ---
     c.setFont("Helvetica-Bold", 11)
@@ -289,39 +147,17 @@ for j in range(5):
     for i in range(5):
         c.drawCentredString(xs+col_no+col_m+(i*col_s)+col_s/2, y-1.5*row_h-2*mm, str(i+1))
 
-    # --- Data ---
-    y_row = y - 2 * row_h
+    # Data
+    y_row = y - 2*row_h
     c.setFont("Helvetica", 10)
     sums = [[] for _ in range(5)]
-
     for i, m in enumerate(mapel_urut, 1):
-        c.drawCentredString(
-            xs + col_no / 2,
-            y_row - row_h / 2 - 2 * mm,
-            str(i)
-        )
-
-        c.drawString(
-            xs + col_no + 2 * mm,
-            y_row - row_h / 2 - 2 * mm,
-            m
-        )
-
+        c.drawCentredString(xs+col_no/2, y_row-row_h/2-2*mm, str(i))
+        c.drawString(xs+col_no+2*mm, y_row-row_h/2-2*mm, m)
         for j in range(5):
             val = row.get(f"{m}_TKAD{j+1}", np.nan)
-
-            c.drawCentredString(
-                xs + col_no + col_m + (j * col_s) + col_s / 2,
-                y_row - row_h / 2 - 2 * mm,
-                format_val(val)
-            )
-
-            if not pd.isna(val):
-                try:
-                    sums[j].append(float(val))
-                except (ValueError, TypeError):
-                    pass
-
+            c.drawCentredString(xs+col_no+col_m+(j*col_s)+col_s/2, y_row-row_h/2-2*mm, format_val(val))
+            if not pd.isna(val): sums[j].append(float(val))
         y_row -= row_h
 
     # Footer
@@ -404,4 +240,3 @@ with col1:
         st.download_button("📄 PDF Per Siswa", make_pdf(row_sel), f"Laporan_{sel_siswa}.pdf")
 with col2:
     st.download_button("📄 PDF Satu Kelas", make_pdf(df_kelas), f"Laporan_Kelas_{sel_kelas}.pdf")
-
