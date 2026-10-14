@@ -143,13 +143,23 @@ def draw_student_page(c, row):
     y = height - mt
 
 for j in range(5):
-    val = row.get(f"{m}_TKAD{j+1}", np.nan)
+    kolom_nilai = cari_kolom_nilai(m, j + 1)
+
+    if kolom_nilai is not None:
+        val = pd.to_numeric(
+            pd.Series([row.get(kolom_nilai, np.nan)]),
+            errors="coerce"
+        ).iloc[0]
+    else:
+        val = np.nan
+
     c.drawCentredString(
-        xs+col_no+col_m+(j*col_s)+col_s/2,
-        y_row-row_h/2-2*mm,
+        xs + col_no + col_m + (j * col_s) + col_s / 2,
+        y_row - row_h / 2 - 2 * mm,
         format_val(val)
     )
-    if not pd.isna(val):
+
+    if pd.notna(val):
         sums[j].append(float(val))
 
     c.drawCentredString(
