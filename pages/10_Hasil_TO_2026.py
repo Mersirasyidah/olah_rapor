@@ -86,8 +86,8 @@ def draw_student_page(c, row):
     if os.path.exists(logo_path):
         try:
             logo_w, logo_h = 30 * mm, 30 * mm
-            x_logo = margin_left - 10 * mm
-            y_logo = height - margin_top - (-10 * mm) - logo_h
+            x_logo = ml - 10 * mm
+            y_logo = height - mt - (-10 * mm) - logo_h
             c.drawImage(logo_path, x_logo, y_logo, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
         except Exception:
             pass
@@ -97,8 +97,8 @@ def draw_student_page(c, row):
     if os.path.exists(logo_kanan_path):
         try:
             logo_w, logo_h = 30 * mm, 30 * mm
-            x_logo_kanan = width - margin_right - logo_w + 5 * mm
-            y_logo_kanan = height - margin_top - (-10 * mm) - logo_h 
+            x_logo_kanan = width - mr - logo_w + 5 * mm
+            y_logo_kanan = height - mt - (-10 * mm) - logo_h 
             c.drawImage(logo_kanan_path, x_logo_kanan, y_logo_kanan, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
         except Exception:
             pass
@@ -151,10 +151,11 @@ def draw_student_page(c, row):
 
     # Garis Pembatas Kop
     c.setLineWidth(1)
-    c.line(margin_left, y, width - margin_right, y)
+    c.line(ml, y, width - mr, y)
     y -= 1.5 * mm
+
     c.setLineWidth(0.5)
-    c.line(margin_left, y, width - margin_right, y)
+    c.line(ml, y, width - mr, y)
     y -= 10 * mm
 
     # --- 2. JUDUL ---
