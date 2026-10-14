@@ -45,8 +45,16 @@ sel_tgl_ttd = st.date_input("Tanggal Tanda Tangan", datetime.now())
 uploaded = st.file_uploader("Unggah file Excel", type=["xlsx"])
 if not uploaded: st.stop()
 
-df = pd.read_excel(uploaded).fillna(np.nan)
-df.columns = df.columns.str.strip()
+df = pd.read_excel(uploaded)
+df.columns = (
+    df.columns.astype(str)
+    .str.strip()
+    .str.replace(r"\s+", " ", regex=True)
+)
+
+# Tampilkan nama kolom untuk pemeriksaan
+st.write("### Pemeriksaan Nama Kolom Excel")
+st.write(df.columns.tolist())
 
 # Pemeriksaan kolom nilai
 with st.expander("🔎 Diagnostik Data Nilai"):
