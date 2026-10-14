@@ -64,33 +64,62 @@ with st.expander("🔎 Diagnostik Data Nilai"):
     st.write("Contoh data nilai:")
     st.dataframe(df.head())
 
-# Pemeriksaan kolom nilai
-with st.expander("🔎 Diagnostik Data Nilai"):
-    st.write("Semua nama kolom:")
-    st.write(df.columns.tolist())
+# === DIAGNOSTIK DAN PEMETAAN KOLOM NILAI ===
+def normalisasi_kolom(nama):
+    return "".join(ch.upper() for ch in str(nama) if ch.isalnum())
 
-    kolom_nilai = [
-        col for col in df.columns
-        if "TKAD" in str(col).upper()
-    ]
+kolom_asli = {
+    normalisasi_kolom(kolom): kolom
+    for kolom in df.columns
+}
 
-    st.write("Kolom yang mengandung TKAD:")
-    st.write(kolom_nilai)
+def cari_kolom_nilai(mapel, sesi):
+    nama_target = f"{mapel}_TKAD{sesi}"
+    return kolom_asli.get(normalisasi_kolom(nama_target))
 
-    st.write("Contoh data nilai:")
+with st.expander("🔎 Diagnostik Kolom Nilai untuk PDF", expanded=True):
+    for mapel in mapel_tetap:
+        for sesi in range(1, 6):
+            kolom = cari_kolom_nilai(mapel, sesi)
+            if kolom:
+                st.write(f"✅ {mapel} sesi {sesi}: kolom `{kolom}`")
+            else:
+                st.warning(
+                    f"❌ Kolom {mapel}_TKAD{sesi} tidak ditemukan."
+                )
+
+    st.write("Contoh data Excel:")
     st.dataframe(df.head())
 
-# Perhitungan Ranking Per Sesi
+# === PERHITUNGAN RANKING PER SESI ===
 for i in range(1, 6):
-    cols_sesi = [f"{m}_TKAD{i}" for m in mapel_tetap]
-    available = [c for c in cols_sesi if c in df.columns]
-    if available:
-        df[f"Total_Sesi_{i}"] = df[available].sum(axis=1, skipna=True)
-        mask = df[available].notna().any(axis=1)
-        df.loc[mask, f"Peringkat_TKAD{i}"] = df[mask].groupby("Kelas")[f"Total_Sesi_{i}"].rank(ascending=False, method="min")
+    cols_sesi = [
+        cari_kolom_nilai(mapel, i)
+        for mapel in mapel_tetap
+    ]
+    cols_sesi = [kolom for kolom in cols_sesi if kolom is not None]
+
+    if cols_sesi:
+        nilai_sesi = df[cols_sesi].apply(
+            pd.to_numeric, errors="coerce"
+        )
+
+        df[f"Total_Sesi_{i}"] = nilai_sesi.sum(
+            axis=1, min_count=1
+        )
+
+        mask = nilai_sesi.notna().any(axis=1)
+
+        df[f"Peringkat_TKAD{i}"] = np.nan
+        df.loc[mask, f"Peringkat_TKAD{i}"] = (
+            df.loc[mask]
+            .assign(_total=df.loc[mask, f"Total_Sesi_{i}"])
+            .groupby("Kelas")["_total"]
+            .rank(ascending=False, method="min")
+        )
     else:
         df[f"Peringkat_TKAD{i}"] = np.nan
-
+        
 kelas_list = sorted(df["Kelas"].astype(str).unique())
 sel_kelas = st.selectbox("Pilih Kelas", kelas_list)
 df_kelas = df[df["Kelas"].astype(str) == str(sel_kelas)].copy()
@@ -112,6 +141,26 @@ def draw_student_page(c, row):
     ml, mr, mt = 30*mm, 15*mm, 25*mm
     cw = width - ml - mr
     y = height - mt
+
+    for j in range(5):
+    kolom_nilai = cari_kolom_nilai(m, j + 1)
+
+    if kolom_nilai is not None:
+        val = pd.to_numeric(
+            pd.Series([row.get(kolom_nilai, np.nan)]),
+            errors="coerce"
+        ).iloc[0]
+    else:
+        val = np.nan
+
+    c.drawCentredString(
+        xs + col_no + col_m + (j * col_s) + col_s / 2,
+        y_row - row_h / 2 - 2 * mm,
+        format_val(val)
+    )
+
+    if pd.notna(val):
+        sums[j].append(float(val))
 
     # Logo Kiri
     logo_path = "assets/logo_kiri.png"
