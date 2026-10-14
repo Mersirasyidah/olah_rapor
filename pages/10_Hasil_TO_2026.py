@@ -64,6 +64,22 @@ with st.expander("🔎 Diagnostik Data Nilai"):
     st.write("Contoh data nilai:")
     st.dataframe(df.head())
 
+# Pemeriksaan kolom nilai
+with st.expander("🔎 Diagnostik Data Nilai"):
+    st.write("Semua nama kolom:")
+    st.write(df.columns.tolist())
+
+    kolom_nilai = [
+        col for col in df.columns
+        if "TKAD" in str(col).upper()
+    ]
+
+    st.write("Kolom yang mengandung TKAD:")
+    st.write(kolom_nilai)
+
+    st.write("Contoh data nilai:")
+    st.dataframe(df.head())
+
 # Perhitungan Ranking Per Sesi
 for i in range(1, 6):
     cols_sesi = [f"{m}_TKAD{i}" for m in mapel_tetap]
