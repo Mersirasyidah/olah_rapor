@@ -149,6 +149,13 @@ def draw_student_page(c, row):
     c.setFillColor(black)
     y -= 3 * mm
 
+    # Garis Pembatas Kop
+    c.setLineWidth(1)
+    c.line(margin_left, y, width - margin_right, y)
+    y -= 1.5 * mm
+    c.setLineWidth(0.5)
+    c.line(margin_left, y, width - margin_right, y)
+    y -= 10 * mm
 
     # --- 2. JUDUL ---
     c.setFont("Helvetica-Bold", 11)
