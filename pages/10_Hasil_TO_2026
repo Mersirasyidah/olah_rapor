@@ -81,37 +81,62 @@ def draw_student_page(c, row):
     cw = width - ml - mr
     y = height - mt
 
-    # --- 1. KOP SURAT ---
+    # Logo Kiri
     logo_path = "assets/logo_kiri.png"
     if os.path.exists(logo_path):
-        c.drawImage(logo_path, ml - 10*mm, y - 18*mm, width=28*mm, height=28*mm, preserveAspectRatio=True, mask='auto')
-    
-    c.setFont("Helvetica-Bold", 12)
-    c.drawCentredString(width/2, y, "PEMERINTAH KABUPATEN BANTUL")
-    y -= 5*mm
-    c.drawCentredString(width/2, y, "DINAS PENDIDIKAN, KEPEMUDAAN, DAN OLAHRAGA")
-    y -= 5*mm
-    c.setFont("Helvetica-Bold", 14)
-    c.drawCentredString(width/2, y, "SMP NEGERI 2 BANGUNTAPAN")
-    y -= 1*mm
+        try:
+            logo_w, logo_h = 30 * mm, 30 * mm
+            x_logo = margin_left - 10 * mm
+            y_logo = height - margin_top - (-10 * mm) - logo_h
+            c.drawImage(logo_path, x_logo, y_logo, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
+        except Exception:
+            pass
 
-    # Aksara Jawa (Tetap Ukuran Besar)
+    # Logo Kanan
+    logo_kanan_path = "assets/logo_kanan.png"
+    if os.path.exists(logo_kanan_path):
+        try:
+            logo_w, logo_h = 30 * mm, 30 * mm
+            x_logo_kanan = width - margin_right - logo_w + 5 * mm
+            y_logo_kanan = height - margin_top - (-10 * mm) - logo_h 
+            c.drawImage(logo_kanan_path, x_logo_kanan, y_logo_kanan, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
+        except Exception:
+            pass
+
+    # Kop Surat
+    c.setFont("Helvetica-Bold", 12)
+    c.drawCentredString(width / 2, y, "PEMERINTAH KABUPATEN BANTUL")
+    y -= 5 * mm
+    c.drawCentredString(width / 2, y, "DINAS PENDIDIKAN, KEPEMUDAAN, DAN OLAHRAGA")
+    y -= 5 * mm
+    c.setFont("Helvetica-Bold", 14)
+    c.drawCentredString(width / 2, y, "SMP NEGERI 2 BANGUNTAPAN")
+    y -= 1 * mm
+
     aksara_path = "assets/aksara_jawa.jpg"
     if os.path.exists(aksara_path):
-        c.drawImage(aksara_path, (width-125*mm)/2, y - 13*mm, width=125*mm, height=12*mm, preserveAspectRatio=True, mask='auto')
-        y -= 14*mm
+        try:
+            aksara_w, aksara_h = 100 * mm, 10 * mm
+            x_aksara = (width - aksara_w) / 2
+            y_aksara = y - aksara_h
+            c.drawImage(aksara_path, x_aksara, y_aksara, width=aksara_w, height=aksara_h, preserveAspectRatio=True, mask='auto')
+            y = y_aksara - 2 * mm
+        except Exception:
+            y -= 4 * mm
     else:
-        y -= 4*mm
+        y -= 4 * mm
 
     c.setFont("Helvetica-Oblique", 10)
-    c.drawCentredString(width/2, y, "Jalan Karangsari, Banguntapan, Bantul, Yogyakarta 55198 Telp. 382754")
-    y -= 5*mm
-    c.setFont("Helvetica", 10); c.setFillColor(blue)
-    c.drawCentredString(width/2, y, "Website : www.smpn2banguntapan.sch.id Email : smp2banguntapan@yahoo.com")
-    c.setFillColor(black); y -= 3*mm
-    
-    c.setLineWidth(1.2); c.line(ml, y, width-mr, y)
-    y -= 10*mm # KEMBALI KE SEMULA (Sebelumnya 7mm)
+    c.drawCentredString(width / 2, y, "Jalan Karangsari, Banguntapan, Kabupaten Bantul, Yogyakarta 55198")
+    y -= 5 * mm
+    c.drawCentredString(width / 2, y, "Telp. (0274) 382754 382754")
+    y -= 5 * mm
+    c.setFont("Helvetica", 10)
+    c.setFillColor(blue)
+    c.drawCentredString(width / 2, y, "Laman : www.smpn2banguntapan.sch.id; Pos-el : smp2banguntapan@yahoo.com")
+    c.setFillColor(black)
+    y -= 3 * mm
+
 
     # --- 2. JUDUL ---
     c.setFont("Helvetica-Bold", 11)
