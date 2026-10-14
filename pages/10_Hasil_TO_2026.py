@@ -102,7 +102,19 @@ def draw_student_page(c, row):
             c.drawImage(logo_kanan_path, x_logo_kanan, y_logo_kanan, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
         except Exception:
             pass
-
+            
+    # Logo Kanan
+    logo_kanan_path = "assets/logo_kanan.png"
+    if os.path.exists(logo_kanan_path):
+        try:
+            logo_w, logo_h = 30 * mm, 30 * mm
+            x_logo_kanan = width - margin_right - logo_w + 5 * mm
+            y_logo_kanan = height - margin_top - (-10 * mm) - logo_h 
+            c.drawImage(logo_kanan_path, x_logo_kanan, y_logo_kanan, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
+        except Exception:
+            pass
+    
+    
     # Kop Surat
     c.setFont("Helvetica-Bold", 12)
     c.drawCentredString(width / 2, y, "PEMERINTAH KABUPATEN BANTUL")
