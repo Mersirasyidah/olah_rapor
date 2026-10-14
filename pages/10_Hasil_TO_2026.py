@@ -104,14 +104,24 @@ def draw_student_page(c, row):
         y -= 4*mm
 
     c.setFont("Helvetica-Oblique", 10)
-    c.drawCentredString(width/2, y, "Jalan Karangsari, Banguntapan, Bantul, Yogyakarta 55198 Telp. 382754")
-    y -= 5*mm
-    c.setFont("Helvetica", 10); c.setFillColor(blue)
-    c.drawCentredString(width/2, y, "Website : www.smpn2banguntapan.sch.id Email : smp2banguntapan@yahoo.com")
-    c.setFillColor(black); y -= 3*mm
-    
-    c.setLineWidth(1.2); c.line(ml, y, width-mr, y)
-    y -= 10*mm # KEMBALI KE SEMULA (Sebelumnya 7mm)
+    c.drawCentredString(width / 2, y, "Jalan Karangsari, Banguntapan, Kabupaten Bantul, Yogyakarta 55198")
+    y -= 5 * mm
+    c.drawCentredString(width / 2, y, "Telp. (0274) 382754 382754")
+    y -= 5 * mm
+    c.setFont("Helvetica", 10)
+    c.setFillColor(blue)
+    c.drawCentredString(width / 2, y, "Laman : www.smpn2banguntapan.sch.id; Pos-el : smp2banguntapan@yahoo.com")
+    c.setFillColor(black)
+    y -= 3 * mm
+
+    # Garis Pembatas Kop
+    c.setLineWidth(1)
+    c.line(ml, y, width - mr, y)
+    y -= 1.5 * mm
+
+    c.setLineWidth(0.5)
+    c.line(ml, y, width - mr, y)
+    y -= 10 * mm
 
     # --- 2. JUDUL ---
     c.setFont("Helvetica-Bold", 11)
