@@ -26,17 +26,17 @@ st.header("Laporan Hasil Persiapan dan Pemantapan")
 
 # --- Input Pilihan ---
 asesmen_opsi = [
-    "TKA/TKAD Dikpora Kab Bantul 1", "TKA/TKAD MKKS SMP Kab Bantul 1",
-    "TKA/TKAD MKKS SMP Kab Bantul 2", "TKA/TKAD Forum MKKS SMP D.I.Yogyakarta",
-    "TKA/TKAD Dikpora Kab Bantul 2"
+    "TKA/TKAD MKKS SMP Kab. Bantul Tahap 1", "TKA/TKAD Dikpora Kab. Bantul Tahap 1",
+    "TKA/TKAD MKKS SMP Kab. Bantul Tahap 2", "TKA/TKAD Dikpora Kab. Bantul Tahap 2",
+    "TKA/TKAD Forum MKKS SMP D.I. Yogyakarta"
 ]
 sel_asesmen = st.selectbox("Pilih Jenis Asesmen", asesmen_opsi)
 tahun_opsi = [f"{th}/{th+1}" for th in range(2025, 2036)]
 sel_tahun = st.selectbox("Pilih Tahun Pelajaran", tahun_opsi, index=0)
 
 tgl_kegiatan_opsi = [
-    "Tanggal 20 - 23 Oktober 2025", "Tanggal 3 - 6 November 2025",
-    "Tanggal 19 - 22 Januari 2026", "Tanggal 2 - 5 Februari 2026", "Tanggal 9 - 12 Maret 2026"
+    "Tanggal 12 - 15 Oktober 2026", "Tanggal         ",
+    "Tanggal        ", "Tanggal        ", "Tanggal       "
 ]
 sel_tgl_kegiatan = st.selectbox("Pilih Tanggal Kegiatan", tgl_kegiatan_opsi)
 sel_tgl_ttd = st.date_input("Tanggal Tanda Tangan", datetime.now())
@@ -164,7 +164,7 @@ def draw_student_page(c, row):
     c.setFont("Helvetica-Bold", 10)
     c.drawCentredString(xs+col_no/2, y-row_h-2*mm, "No")
     c.drawCentredString(xs+col_no+col_m/2, y-row_h-2*mm, "Mata Pelajaran")
-    c.drawCentredString(xs+col_no+col_m+(col_s*5)/2, y-row_h/2-2*mm, "Nilai TKA/TKAD")
+    c.drawCentredString(xs+col_no+col_m+(col_s*5)/2, y-row_h/2-2*mm, "Hasil TO TKA/TKAD")
     for i in range(5):
         c.drawCentredString(xs+col_no+col_m+(i*col_s)+col_s/2, y-1.5*row_h-2*mm, str(i+1))
 
