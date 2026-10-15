@@ -35,8 +35,8 @@ tahun_opsi = [f"{th}/{th+1}" for th in range(2025, 2036)]
 sel_tahun = st.selectbox("Pilih Tahun Pelajaran", tahun_opsi, index=0)
 
 tgl_kegiatan_opsi = [
-    "Tanggal 12 - 15 Oktober 2026", "Tanggal         ",
-    "Tanggal        ", "Tanggal        ", "Tanggal       "
+    "Tanggal 12 - 15 Oktober 2026", "Tanggal",
+    "Tanggal", "Tanggal", "Tanggal"
 ]
 sel_tgl_kegiatan = st.selectbox("Pilih Tanggal Kegiatan", tgl_kegiatan_opsi)
 sel_tgl_ttd = st.date_input("Tanggal Tanda Tangan", datetime.now())
